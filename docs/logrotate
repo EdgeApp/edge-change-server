@@ -1,0 +1,9 @@
+# /etc/logrotate.d/changeServer
+
+/var/log/pm2/changeServer.log {
+  copytruncate
+  daily
+  missingok
+  notifempty
+  rotate 10
+}

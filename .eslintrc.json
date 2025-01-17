@@ -1,0 +1,17 @@
+{
+  "extends": [
+    "standard-kit/prettier",
+    "standard-kit/prettier/typescript",
+    "standard-kit/prettier/node"
+  ],
+  "parserOptions": {
+    "project": "tsconfig.json"
+  },
+  "plugins": [
+    "simple-import-sort"
+  ],
+  "rules": {
+    "simple-import-sort/imports": "error"
+  },
+  "root": true
+}

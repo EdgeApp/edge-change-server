@@ -1,0 +1,9 @@
+{
+  "apps": [
+    {
+      "name": "changeServer",
+      "script": "./lib/index.js",
+      "out_file": "/var/log/pm2/changeServer.log"
+    }
+  ]
+}

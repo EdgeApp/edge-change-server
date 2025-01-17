@@ -1,0 +1,71 @@
+{
+  "name": "edge-change-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Detects whether addresses have on-chain changes",
+  "homepage": "https://github.com/EdgeApp/edge-change-server#readme",
+  "bugs": {
+    "url": "https://github.com/EdgeApp/edge-change-server/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EdgeApp/edge-change-server.git"
+  },
+  "license": "MIT",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "sucrase -q -t typescript,imports -d ./lib ./src",
+    "clean": "rimraf lib",
+    "cli": "node -r sucrase/register src/cli/cli.ts",
+    "configure": "configure ./src/serverConfig.ts",
+    "fix": "eslint . --fix",
+    "lint": "eslint .",
+    "precommit": "lint-staged && npm-run-all types test prepare",
+    "prepare": "husky install && npm-run-all clean configure build",
+    "start": "node -r sucrase/register src/index.ts",
+    "test": "mocha -r sucrase/register 'test/**/*.test.ts'",
+    "types": "tsc",
+    "verify": "npm-run-all lint types test prepare"
+  },
+  "lint-staged": {
+    "*.{js,ts}": "eslint",
+    "*.html": "prettier --write"
+  },
+  "dependencies": {
+    "cleaner-config": "^0.1.7",
+    "cleaners": "^0.3.16",
+    "clipanion": "^3.2.0-rc.3",
+    "edge-server-tools": "^0.2.18",
+    "node-fetch": "^2.6.0",
+    "prom-client": "^15.1.0",
+    "serverlet": "^0.1.1",
+    "ws": "^8.18.0",
+    "yaob": "^0.3.12",
+    "yavent": "^0.1.4"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.5",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^20.8.5",
+    "@types/node-fetch": "^2.5.3",
+    "@types/ws": "^8.5.13",
+    "@typescript-eslint/eslint-plugin": "^4.8.2",
+    "@typescript-eslint/parser": "^4.8.2",
+    "chai": "^4.2.0",
+    "eslint": "^7.14.0",
+    "eslint-config-standard-kit": "0.15.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.1.4",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-simple-import-sort": "^6.0.1",
+    "husky": "^8.0.3",
+    "lint-staged": "^10.5.3",
+    "mocha": "^6.2.2",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.2.0",
+    "rimraf": "^3.0.0",
+    "sucrase": "^3.16.0",
+    "typescript": "^4.6.2"
+  }
+}
