@@ -157,7 +157,7 @@ describe('blockbook plugin', function () {
       throw error
     })
     plugin.on('connect', () => {
-      plugin.subscribe(TEST_ADDRESS)
+      plugin.subscribe(TEST_ADDRESS).catch(done)
     })
 
     plugin.on('update', data => {

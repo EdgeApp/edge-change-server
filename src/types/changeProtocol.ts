@@ -1,5 +1,6 @@
 import {
   asArray,
+  asObject,
   asOptional,
   asString,
   asTuple,
@@ -30,14 +31,16 @@ const asAddress = asTuple<AddressTuple>(
 )
 
 export type SubscribeResult =
-  /** Subscribe failed (unsupported chain) */
+  /** Subscribe failed */
   | 0
   /** Subscribe succeeded, no changes */
   | 1
   /** Subscribed succeeded, changes present */
   | 2
+// export type SubscribeResult = boolean
 
 const asSubscribeResult: Cleaner<SubscribeResult> = asValue(0, 1, 2)
+// const asSubscribeResult: Cleaner<SubscribeResult> = asBoolean
 
 export const changeProtocol = makeRpcProtocol({
   serverMethods: {
@@ -55,6 +58,26 @@ export const changeProtocol = makeRpcProtocol({
   clientMethods: {
     update: {
       asParams: asAddress
+    },
+    pluginConnect: {
+      asParams: asObject({ pluginId: asString })
+    },
+    pluginDisconnect: {
+      asParams: asObject({ pluginId: asString })
     }
   }
 })
+
+// core:
+//   ws
+//   codec
+//   activePluginIds
+//   subcriptions: Map<pluginID, address[]>
+//
+// 1. Core connects
+// 2. Server sends pluginConnect
+// 3. Core foreach pluginId with wallets, subscribe
+// ...
+// 1. Server sends pluginDisconnect
+// 2. Core keeps updating subscriptions as if nothing happened
+// 3. Server sends pluginConnect

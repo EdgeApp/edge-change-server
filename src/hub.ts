@@ -1,7 +1,6 @@
 import { Counter, Gauge } from 'prom-client'
 import WebSocket from 'ws'
 
-import { RpcCodec } from './jsonRpc'
 import { messageToString } from './messageToString'
 import { AddressPlugin } from './types/addressPlugin'
 import {
@@ -9,6 +8,12 @@ import {
   changeProtocol,
   SubscribeResult
 } from './types/changeProtocol'
+
+const pluginGauge = new Gauge({
+  name: 'change_plugin_count',
+  help: 'Active change-server plugins',
+  labelNames: ['pluginId'] as const
+})
 
 const connectionGauge = new Gauge({
   name: 'change_connection_count',
@@ -31,10 +36,16 @@ export interface AddressHub {
   handleConnection: (ws: WebSocket) => void
 }
 
+export interface AddressHubOpts {
+  plugins: AddressPlugin[]
+  log?: (text: string) => void
+}
+
 interface PluginRow {
-  /**  Maps from addresses to socketId's */
-  addresses: Map<string, Set<number>>
+  /**  Maps address to socketIds */
+  addressSubscriptions: Map<string, Set<number>>
   plugin: AddressPlugin
+  pluginReady: Promise<void>
 }
 
 /**
@@ -43,149 +54,230 @@ interface PluginRow {
  * and automatically unsubscribes if the socket closes,
  * handling cases where multiple clients subscribe to the same address.
  */
-export function makeAddressHub(plugins: AddressPlugin[]): AddressHub {
+export function makeAddressHub(opts: AddressHubOpts): AddressHub {
+  const { plugins } = opts
   let nextSocketId = 0
+
+  // Maps socketId to changeProtocol server codec:
   const codecMap = new Map<
     number,
-    RpcCodec<{ update: (address: AddressTuple) => void }>
+    ReturnType<typeof changeProtocol.makeServerCodec>
   >()
 
-  // Index plugins by id:
-  const pluginMap: { [pluginId: string]: PluginRow } = {}
+  // Maps pluginId to PluginRow:
+  const pluginMap = new Map<string, PluginRow>()
 
   // Build our tables:
   for (const plugin of plugins) {
     const { pluginId } = plugin
-    const pluginRow: PluginRow = { addresses: new Map(), plugin }
-    pluginMap[plugin.pluginId] = pluginRow
+    const pluginRow: PluginRow = {
+      addressSubscriptions: new Map(),
+      plugin,
+      pluginReady: new Promise(resolve => {
+        plugin.on('update', ({ address, checkpoint }) => {
+          eventCounter.inc({ pluginId })
+          const socketIds = pluginRow.addressSubscriptions.get(address)
+          if (socketIds == null) return
+          for (const socketId of socketIds) {
+            const codec = codecMap.get(socketId)
+            if (codec == null) continue
+            console.log(`WebSocket ${process.pid}.${socketId} update`)
+            codec.remoteMethods.update([pluginId, address, checkpoint])
+          }
+        })
 
-    plugin.on('update', ({ address, checkpoint }) => {
-      const addressRow = pluginRow.addresses.get(address)
-      if (addressRow == null) return
-      for (const socketId of addressRow) {
-        console.log(`WebSocket ${process.pid}.${socketId} update`)
-        const codec = codecMap.get(socketId)
-        eventCounter.inc({ pluginId })
-        codec?.remoteMethods.update([pluginId, address, checkpoint])
-      }
-    })
-  }
-
-  function handleConnection(ws: WebSocket): void {
-    const socketId = nextSocketId++
-    function log(text: string): void {
-      console.log(`WebSocket ${process.pid}.${socketId} ` + text)
-    }
-
-    connectionGauge.inc()
-    log('connected')
-
-    const codec = changeProtocol.makeServerCodec({
-      handleError(error) {
-        log(`send error: ${String(error)}`)
-        ws.close()
-      },
-
-      async handleSend(text) {
-        ws.send(text)
-      },
-
-      localMethods: {
-        async subscribe(params: AddressTuple[]): Promise<SubscribeResult[]> {
-          log(`subscribed ${params.length}`)
-
-          // Subscribe to the addresses:
-          for (const param of params) {
-            const [pluginId, address] = param
-            const pluginRow = pluginMap[pluginId]
-            if (pluginRow == null) continue
-
-            const addressRow = pluginRow.addresses.get(address)
-            if (addressRow == null) {
-              // We are not subscribed, so do that now:
-              pluginRow.addresses.set(address, new Set([socketId]))
-              subscriptionGauge.set({ pluginId }, pluginRow.addresses.size)
-              pluginRow.plugin.subscribe(address)
-            } else {
-              // We are already subscribed, so just note the socket:
-              addressRow.add(socketId)
+        plugin.on('connect', () => {
+          pluginGauge.inc({ pluginId })
+          for (const [, socketIds] of pluginRow.addressSubscriptions) {
+            if (socketIds == null) continue
+            for (const socketId of socketIds) {
+              const codec = codecMap.get(socketId)
+              if (codec == null) continue
+              codec.remoteMethods.pluginConnect({ pluginId })
             }
           }
+          resolve()
+        })
+        plugin.on('disconnect', () => {
+          pluginGauge.dec({ pluginId })
+          for (const [, socketIds] of pluginRow.addressSubscriptions) {
+            if (socketIds == null) continue
+            for (const socketId of socketIds) {
+              const codec = codecMap.get(socketId)
+              if (codec == null) continue
+              codec.remoteMethods.pluginDisconnect({ pluginId })
+            }
+          }
+        })
 
-          // Do the initial scan:
-          return await Promise.all(
-            params.map<Promise<SubscribeResult>>(async param => {
-              const [pluginId, address, checkpoint] = param
-              const pluginRow = pluginMap[pluginId]
-              if (pluginRow == null) return 0
+        plugin.on('error', error => {
+          console.error(`${pluginId} plugin error:`, error)
+        })
+      })
+    }
+    pluginMap.set(pluginId, pluginRow)
+  }
 
-              // If the plugin can't scan, let the client do it:
-              if (pluginRow.plugin.scanAddress == null) return 2
+  /**
+   * Unsubscribes to an address on a plugin and cleans up the address
+   * subscription for a PluginRow.
+   */
+  async function subscribeClientToPluginAddress(
+    socketId: number,
+    pluginRow: PluginRow,
+    address: string
+  ): Promise<boolean> {
+    const socketIds = pluginRow.addressSubscriptions.get(address)
+    if (socketIds == null) {
+      // We are not subscribed, so do that now:
+      pluginRow.addressSubscriptions.set(address, new Set([socketId]))
+      subscriptionGauge.set(
+        { pluginId: pluginRow.plugin.pluginId },
+        pluginRow.addressSubscriptions.size
+      )
+      return await pluginRow.plugin.subscribe(address)
+    } else {
+      // We are already subscribed, so just note the socket:
+      socketIds.add(socketId)
+      return true
+    }
+  }
 
-              const changed = await pluginRow.plugin
-                .scanAddress(address, checkpoint)
-                .catch(() => true)
-              return changed ? 2 : 1
-            })
-          )
+  /**
+   * Unsubscribes to an address on a plugin and cleans up the address
+   * subscription for a PluginRow.
+   */
+  async function unsubscribeClientsToPluginAddress(
+    pluginRow: PluginRow,
+    address: string
+  ): Promise<boolean> {
+    pluginRow.addressSubscriptions.delete(address)
+    subscriptionGauge.set(
+      { pluginId: pluginRow.plugin.pluginId },
+      pluginRow.addressSubscriptions.size
+    )
+    return await pluginRow.plugin.unsubscribe(address)
+  }
+
+  return {
+    handleConnection(ws: WebSocket): void {
+      const socketId = nextSocketId++
+      function log(text: string): void {
+        if (opts.log != null) {
+          opts.log(`WebSocket ${process.pid}.${socketId} ` + text)
+        }
+      }
+
+      connectionGauge.inc()
+      log('connected')
+
+      const codec = changeProtocol.makeServerCodec({
+        handleError(error) {
+          log(`send error: ${String(error)}`)
+          ws.close(1011, 'Internal error')
         },
 
-        async unsubscribe(params: AddressTuple[]): Promise<undefined> {
-          log(`unsubscribed ${params.length}`)
+        async handleSend(text) {
+          ws.send(text)
+        },
 
-          for (const param of params) {
-            const [pluginId, address] = param
-            const pluginRow = pluginMap[pluginId]
-            if (pluginRow == null) continue
+        localMethods: {
+          async subscribe(params: AddressTuple[]): Promise<SubscribeResult[]> {
+            log(`subscribed ${params.length}`)
 
-            const addressRow = pluginRow.addresses.get(address)
-            if (addressRow == null || !addressRow.has(socketId)) continue
-            addressRow.delete(socketId)
+            // Do the initial scan:
+            return await Promise.all(
+              params.map(
+                async (param): Promise<SubscribeResult> => {
+                  const [pluginId, address, checkpoint] = param
+                  const pluginRow = pluginMap.get(pluginId)
+                  if (pluginRow == null) return 0
+
+                  await pluginRow.pluginReady
+
+                  // Subscribe to the addresses:
+                  const success = await subscribeClientToPluginAddress(
+                    socketId,
+                    pluginRow,
+                    address
+                  )
+                  if (!success) return 0
+
+                  // If the plugin can't scan, let the client do it:
+                  if (pluginRow.plugin.scanAddress == null) return 0
+
+                  const changed = await pluginRow.plugin
+                    .scanAddress(address, checkpoint)
+                    .catch(_ => {
+                      return true
+                    })
+                  return changed ? 2 : 1
+                }
+              )
+            )
+          },
+
+          async unsubscribe(params: AddressTuple[]): Promise<undefined> {
+            log(`unsubscribed ${params.length}`)
+
+            for (const param of params) {
+              const [pluginId, address] = param
+              const pluginRow = pluginMap.get(pluginId)
+              if (pluginRow == null) continue
+
+              const socketIds = pluginRow.addressSubscriptions.get(address)
+              if (socketIds == null || !socketIds.has(socketId)) continue
+              socketIds.delete(socketId)
+
+              // Actually unsubscribe if the list is empty:
+              if (socketIds.size < 1) {
+                await unsubscribeClientsToPluginAddress(pluginRow, address)
+              }
+            }
+
+            return undefined
+          }
+        }
+      })
+
+      // Save the codec for notifications:
+      codecMap.set(socketId, codec)
+
+      ws.on('close', () => {
+        log(`closed`)
+        connectionGauge.dec()
+
+        // Cleanup the server codec:
+        codec.handleClose()
+
+        // Cleanup the codec map:
+        codecMap.delete(socketId)
+
+        // Search & destroy any subscriptions:
+        for (const [, pluginRow] of pluginMap.entries()) {
+          for (const [address, socketIds] of pluginRow.addressSubscriptions) {
+            if (!socketIds.has(socketId)) continue
+            socketIds.delete(socketId)
 
             // Actually unsubscribe if the list is empty:
-            if (addressRow.size < 1) {
-              pluginRow.addresses.delete(address)
-              subscriptionGauge.set({ pluginId }, pluginRow.addresses.size)
-              pluginRow.plugin.unsubscribe(address)
+            if (socketIds.size < 1) {
+              unsubscribeClientsToPluginAddress(pluginRow, address).catch(
+                error => {
+                  console.error('unsubscribe error:', error)
+                }
+              )
             }
           }
-
-          return undefined
         }
-      }
-    })
-    codecMap.set(socketId, codec)
+      })
 
-    ws.on('close', () => {
-      log(`closed`)
-      connectionGauge.dec()
-      codec.handleClose()
+      ws.on('error', error => {
+        log(`connection error: ${String(error)}`)
+      })
 
-      // Search & destroy any subscriptions:
-      for (const pluginId of Object.keys(pluginMap)) {
-        const pluginRow = pluginMap[pluginId]
-        for (const [address, addressRow] of pluginRow.addresses) {
-          if (!addressRow.has(socketId)) continue
-          addressRow.delete(socketId)
-
-          // Actually unsubscribe if the list is empty:
-          if (addressRow.size < 1) {
-            pluginRow.addresses.delete(address)
-            subscriptionGauge.set({ pluginId }, pluginRow.addresses.size)
-            pluginRow.plugin.unsubscribe(address)
-          }
-        }
-      }
-    })
-
-    ws.on('error', error => {
-      log(`connection error: ${String(error)}`)
-    })
-
-    ws.on('message', message => {
-      codec.handleMessage(messageToString(message))
-    })
+      ws.on('message', message => {
+        codec.handleMessage(messageToString(message))
+      })
+    }
   }
-
-  return { handleConnection }
 }

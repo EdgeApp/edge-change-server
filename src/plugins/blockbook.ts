@@ -50,20 +50,18 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     pluginId,
     on,
 
-    subscribe(address) {
-      codec.remoteMethods
-        .subscribeAddresses({ addresses: [address] })
-        .catch(error => {
-          emit('error', error)
-        })
+    async subscribe(address) {
+      const result = await codec.remoteMethods.subscribeAddresses({
+        addresses: [address]
+      })
+      return result.subscribed
     },
 
-    unsubscribe(address) {
-      codec.remoteMethods
-        .unsubscribeAddresses({ addresses: [address] })
-        .catch(error => {
-          emit('error', error)
-        })
+    async unsubscribe(address) {
+      const result = await codec.remoteMethods.unsubscribeAddresses({
+        addresses: [address]
+      })
+      return result.subscribed
     },
 
     async scanAddress(address, checkpoint): Promise<boolean> {

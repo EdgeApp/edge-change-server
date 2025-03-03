@@ -9,13 +9,16 @@ export function makeFakePlugin(): AddressPlugin {
     pluginId: 'fake',
     on,
 
-    subscribe(address) {
+    async subscribe(address) {
       setTimeout(() => {
         emit('update', { address })
       }, 1000)
+      return true
     },
 
-    unsubscribe(address) {},
+    async unsubscribe(address) {
+      return true
+    },
 
     async scanAddress(address, checkpoint): Promise<boolean> {
       return false
