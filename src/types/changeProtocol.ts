@@ -1,10 +1,11 @@
 import {
   asArray,
+  asBoolean,
+  asObject,
   asOptional,
   asString,
   asTuple,
-  asValue,
-  Cleaner
+  asValue
 } from 'cleaners'
 
 import { makeRpcProtocol } from '../jsonRpc'
@@ -29,21 +30,21 @@ const asAddress = asTuple<AddressTuple>(
   asOptional(asString)
 )
 
-export type SubscribeResult =
-  /** Subscribe failed (unsupported chain) */
-  | 0
-  /** Subscribe succeeded, no changes */
-  | 1
-  /** Subscribed succeeded, changes present */
-  | 2
+// export type SubscribeResult =
+//   /** Subscribe failed */
+//   | 0
+//   /** Subscribe succeeded, no changes */
+//   | 1
+//   /** Subscribed succeeded, changes present */
+//   | 2
 
-const asSubscribeResult: Cleaner<SubscribeResult> = asValue(0, 1, 2)
+// const asSubscribeResult: Cleaner<SubscribeResult> = asValue(0, 1, 2)
 
 export const changeProtocol = makeRpcProtocol({
   serverMethods: {
     subscribe: {
       asParams: asArray(asAddress),
-      asResult: asArray(asSubscribeResult)
+      asResult: asArray(asBoolean)
     },
 
     unsubscribe: {
@@ -55,6 +56,26 @@ export const changeProtocol = makeRpcProtocol({
   clientMethods: {
     update: {
       asParams: asAddress
+    },
+    pluginConnect: {
+      asParams: asObject({ pluginIds: asArray(asString) })
+    },
+    pluginDisconnect: {
+      asParams: asObject({ pluginIds: asArray(asString) })
     }
   }
 })
+
+// core:
+//   ws
+//   codec
+//   activePluginIds
+//   subcriptions: Map<pluginID, address[]>
+//
+// 1. Core connects
+// 2. Server sends pluginConnect
+// 3. Core foreach pluginId with wallets, subscribe
+// ...
+// 1. Server sends pluginDisconnect
+// 2. Core keeps updating subscriptions as if nothing happened
+// 3. Server sends pluginConnect

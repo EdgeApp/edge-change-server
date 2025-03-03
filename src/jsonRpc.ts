@@ -91,15 +91,26 @@ export function makeRpcProtocol<
    * Methods supported on the client side.
    */
   clientMethods: ClientCleaners
+
+  /**
+   * Optionally used if the protocol differs from strict JSON-RPC 2.0.
+   */
+  asCall?: Cleaner<JsonRpcCall>
+  asReturn?: Cleaner<JsonRpcReturn>
 }): RpcProtocol<Methods<ServerCleaners>, Methods<ClientCleaners>> {
-  const { serverMethods, clientMethods } = opts
+  const {
+    serverMethods,
+    clientMethods,
+    asCall = asJsonRpcCall,
+    asReturn = asJsonRpcReturn
+  } = opts
 
   return {
     makeServerCodec(opts) {
-      return makeCodec(serverMethods, clientMethods, opts)
+      return makeCodec(serverMethods, clientMethods, asCall, asReturn, opts)
     },
     makeClientCodec(opts) {
-      return makeCodec(clientMethods, serverMethods, opts)
+      return makeCodec(clientMethods, serverMethods, asCall, asReturn, opts)
     }
   }
 }
@@ -123,9 +134,13 @@ type Methods<T> = {
 function makeCodec(
   localCleaners: MethodCleaners,
   remoteCleaners: MethodCleaners,
+  asCall: Cleaner<JsonRpcCall>,
+  asReturn: Cleaner<JsonRpcReturn>,
   opts: RpcCodecOpts<any>
 ): RpcCodec<any> {
   const { handleError, handleSend, localMethods } = opts
+  const wasCall = uncleaner(asCall)
+  const wasReturn = uncleaner(asReturn)
 
   const sendError = async (
     code: number,
@@ -134,7 +149,7 @@ function makeCodec(
   ): Promise<void> =>
     await handleSend(
       JSON.stringify(
-        wasJsonRpcReturn({
+        wasReturn({
           jsonrpc: '2.0',
           result: undefined,
           error: { code, message, data: undefined },
@@ -160,7 +175,7 @@ function makeCodec(
       remoteMethods[name] = (params: unknown): void => {
         handleSend(
           JSON.stringify(
-            wasJsonRpcCall({
+            wasCall({
               jsonrpc: '2.0',
               method: name,
               params: wasParams(params),
@@ -183,7 +198,7 @@ function makeCodec(
 
         handleSend(
           JSON.stringify(
-            wasJsonRpcCall({
+            wasCall({
               jsonrpc: '2.0',
               method: name,
               params: wasParams(params),
@@ -208,8 +223,8 @@ function makeCodec(
     }
 
     // TODO: We need to add support for batch calls.
-    const call = asMaybe(asJsonRpcCall)(json)
-    const response = asMaybe(asJsonRpcReturn)(json)
+    const call = asMaybe(asCall)(json)
+    const response = asMaybe(asReturn)(json)
 
     if (call != null) {
       const { method, id, params } = call
@@ -251,7 +266,7 @@ function makeCodec(
           (result: unknown) => {
             handleSend(
               JSON.stringify(
-                wasJsonRpcReturn({
+                wasReturn({
                   jsonrpc: '2.0',
                   result: wasResult(result),
                   error: undefined,
@@ -350,7 +365,6 @@ const asJsonRpcCall = asObject<JsonRpcCall>({
   params: asUnknown,
   id: asOptional(asRpcId)
 })
-const wasJsonRpcCall = uncleaner(asJsonRpcCall)
 
 const asJsonRpcReturn = asObject<JsonRpcReturn>({
   jsonrpc: asValue('2.0'),
@@ -364,4 +378,3 @@ const asJsonRpcReturn = asObject<JsonRpcReturn>({
   ),
   id: asRpcId
 })
-const wasJsonRpcReturn = uncleaner(asJsonRpcReturn)
