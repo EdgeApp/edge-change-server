@@ -10,6 +10,12 @@ import {
   SubscribeResult
 } from './types/changeProtocol'
 
+const pluginGauge = new Gauge({
+  name: 'change_plugin_count',
+  help: 'Active change-server plugins',
+  labelNames: ['pluginId'] as const
+})
+
 const connectionGauge = new Gauge({
   name: 'change_connection_count',
   help: 'Active websocket connections'
@@ -68,6 +74,16 @@ export function makeAddressHub(plugins: AddressPlugin[]): AddressHub {
         eventCounter.inc({ pluginId })
         codec?.remoteMethods.update([pluginId, address, checkpoint])
       }
+    })
+
+    plugin.on('connect', () => {
+      pluginGauge.inc({ pluginId })
+      // TODO: Tell clients
+    })
+    plugin.on('disconnect', () => {
+      pluginGauge.dec({ pluginId })
+      // TODO: Tell clients
+      // Clear active addresses list
     })
   }
 
