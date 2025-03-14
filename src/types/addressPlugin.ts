@@ -3,6 +3,7 @@ import { OnEvents } from 'yavent'
 export interface PluginEvents {
   connect: undefined
   disconnect: undefined
+  error: unknown
   update: { address: string; checkpoint?: string }
 }
 
@@ -17,4 +18,6 @@ export interface AddressPlugin {
 
   // Not all plugins support scanning:
   scanAddress?: (address: string, checkpoint?: string) => Promise<boolean>
+
+  destroy: () => void
 }

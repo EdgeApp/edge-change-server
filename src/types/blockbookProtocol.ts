@@ -41,8 +41,8 @@ export const blockbookProtocol = makeRpcProtocol({
       asResult: asObject({
         address: asString,
         balance: asString,
-        totalReceived: asString,
-        totalSent: asString,
+        totalReceived: asOptional(asString),
+        totalSent: asOptional(asString),
         unconfirmedBalance: asString,
         unconfirmedTxs: asNumber,
         txs: asNumber,
