@@ -111,6 +111,9 @@ describe('blockbook plugin', function () {
           },
           unsubscribeAddresses: function (params) {
             throw new Error('Function not implemented.')
+          },
+          ping: async function () {
+            return {}
           }
         }
       })

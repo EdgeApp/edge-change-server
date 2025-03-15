@@ -7,6 +7,7 @@ import {
   asObject,
   asOptional,
   asString,
+  asUndefined,
   asUnknown,
   asValue,
   Cleaner
@@ -63,6 +64,11 @@ export const blockbookProtocol = makeRpcProtocol({
     unsubscribeAddresses: {
       asParams: asObject({ addresses: asArray(asString) }),
       asResult: asObject({ subscribed: asBoolean })
+    },
+
+    ping: {
+      asParams: asUndefined,
+      asResult: asObject({})
     }
 
     // estimateFee

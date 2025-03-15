@@ -23,6 +23,9 @@ describe('blockbookProtocol server', function () {
         },
         unsubscribeAddresses: function (_params) {
           throw new Error('Function not implemented.')
+        },
+        async ping() {
+          return {}
         }
       }
     })
@@ -104,6 +107,9 @@ describe('blockbookProtocol client', function () {
         },
         unsubscribeAddresses: function (_params) {
           throw new Error('Function not implemented.')
+        },
+        async ping() {
+          return {}
         }
       }
     })

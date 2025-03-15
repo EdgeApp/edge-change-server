@@ -31,6 +31,12 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     }
   })
 
+  const pingInterval = setInterval(() => {
+    codec.remoteMethods.ping(undefined).catch(error => {
+      console.error('ping error:', error)
+    })
+  }, 50000)
+
   ws.on('message', message => {
     const text = messageToString(message)
     codec.handleMessage(text)
@@ -41,6 +47,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   ws.on('close', () => {
     codec.handleClose()
     emit('disconnect', undefined)
+    // TODO: Reconnect
   })
   ws.on('error', error => {
     emit('error', error)
@@ -85,6 +92,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
     destroy() {
       ws.close()
+      clearInterval(pingInterval)
     }
   }
 }
