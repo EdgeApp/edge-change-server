@@ -45,7 +45,6 @@ interface PluginRow {
   /**  Maps address to socketIds */
   addressSubscriptions: Map<string, Set<number>>
   plugin: AddressPlugin
-  pluginReady: Promise<void>
 }
 
 /**
@@ -70,50 +69,47 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
   // Build our tables:
   for (const plugin of plugins) {
     const { pluginId } = plugin
+    plugin.on('update', ({ address, checkpoint }) => {
+      eventCounter.inc({ pluginId })
+      const socketIds = pluginRow.addressSubscriptions.get(address)
+      if (socketIds == null) return
+      for (const socketId of socketIds) {
+        const codec = codecMap.get(socketId)
+        if (codec == null) continue
+        console.log(`WebSocket ${process.pid}.${socketId} update`)
+        codec.remoteMethods.update([pluginId, address, checkpoint])
+      }
+    })
+
+    plugin.on('connect', () => {
+      pluginGauge.inc({ pluginId })
+      for (const [, socketIds] of pluginRow.addressSubscriptions) {
+        if (socketIds == null) continue
+        for (const socketId of socketIds) {
+          const codec = codecMap.get(socketId)
+          if (codec == null) continue
+          codec.remoteMethods.pluginConnect({ pluginId })
+        }
+      }
+    })
+    plugin.on('disconnect', () => {
+      pluginGauge.dec({ pluginId })
+      for (const [, socketIds] of pluginRow.addressSubscriptions) {
+        if (socketIds == null) continue
+        for (const socketId of socketIds) {
+          const codec = codecMap.get(socketId)
+          if (codec == null) continue
+          codec.remoteMethods.pluginDisconnect({ pluginId })
+        }
+      }
+    })
+
+    plugin.on('error', error => {
+      console.error(`${pluginId} plugin error:`, error)
+    })
     const pluginRow: PluginRow = {
       addressSubscriptions: new Map(),
-      plugin,
-      pluginReady: new Promise(resolve => {
-        plugin.on('update', ({ address, checkpoint }) => {
-          eventCounter.inc({ pluginId })
-          const socketIds = pluginRow.addressSubscriptions.get(address)
-          if (socketIds == null) return
-          for (const socketId of socketIds) {
-            const codec = codecMap.get(socketId)
-            if (codec == null) continue
-            console.log(`WebSocket ${process.pid}.${socketId} update`)
-            codec.remoteMethods.update([pluginId, address, checkpoint])
-          }
-        })
-
-        plugin.on('connect', () => {
-          pluginGauge.inc({ pluginId })
-          for (const [, socketIds] of pluginRow.addressSubscriptions) {
-            if (socketIds == null) continue
-            for (const socketId of socketIds) {
-              const codec = codecMap.get(socketId)
-              if (codec == null) continue
-              codec.remoteMethods.pluginConnect({ pluginId })
-            }
-          }
-          resolve()
-        })
-        plugin.on('disconnect', () => {
-          pluginGauge.dec({ pluginId })
-          for (const [, socketIds] of pluginRow.addressSubscriptions) {
-            if (socketIds == null) continue
-            for (const socketId of socketIds) {
-              const codec = codecMap.get(socketId)
-              if (codec == null) continue
-              codec.remoteMethods.pluginDisconnect({ pluginId })
-            }
-          }
-        })
-
-        plugin.on('error', error => {
-          console.error(`${pluginId} plugin error:`, error)
-        })
-      })
+      plugin
     }
     pluginMap.set(pluginId, pluginRow)
   }
@@ -183,17 +179,15 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
 
         localMethods: {
           async subscribe(params: AddressTuple[]): Promise<SubscribeResult[]> {
-            log(`subscribed ${params.length}`)
+            log(`subscribing ${params.length}`)
 
             // Do the initial scan:
-            return await Promise.all(
+            const result = await Promise.all(
               params.map(
                 async (param): Promise<SubscribeResult> => {
                   const [pluginId, address, checkpoint] = param
                   const pluginRow = pluginMap.get(pluginId)
                   if (pluginRow == null) return 0
-
-                  await pluginRow.pluginReady
 
                   // Subscribe to the addresses:
                   const success = await subscribeClientToPluginAddress(
@@ -209,12 +203,17 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
                   const changed = await pluginRow.plugin
                     .scanAddress(address, checkpoint)
                     .catch(_ => {
+                      // TODO: log error somewhere
                       return true
                     })
                   return changed ? 2 : 1
                 }
               )
             )
+
+            log(`subscribed ${params.length}`)
+
+            return result
           },
 
           async unsubscribe(params: AddressTuple[]): Promise<undefined> {

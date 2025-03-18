@@ -25,7 +25,7 @@ describe('blockbook plugin', function () {
   const HIGH_CHECKPOINT = '999999999'
 
   const host = 'localhost'
-  const port = 7357
+  const port = Math.floor(Math.random() * 1000 + 5000)
   const mockBlockbookUrl = USE_REAL_BLOCKBOOK_SERVER
     ? `wss://btcbook.nownodes.io/wss/${serverConfig.nowNodesApiKey}`
     : `ws://${host}:${port}`
@@ -34,7 +34,6 @@ describe('blockbook plugin', function () {
     host,
     port
   })
-
   beforeAll(() => {
     blockbookWsServer.on('connection', socket => {
       const codec = blockbookProtocol.makeServerCodec({
@@ -144,62 +143,59 @@ describe('blockbook plugin', function () {
     plugin.destroy()
   })
 
-  test('plugin instantiation and connection', function (done) {
+  test('plugin instantiation and connection', async function () {
     const disconnectHandler = jest.fn()
     expect(plugin.pluginId).toBe('test')
-    plugin.on('connect', () => {
-      expect(disconnectHandler).not.toBeCalled()
-      done()
+    const connectPromise = new Promise<void>(resolve => {
+      plugin.on('connect', () => {
+        resolve()
+      })
     })
+    await plugin.subscribe(TEST_ADDRESS)
+    await connectPromise
     plugin.on('disconnect', disconnectHandler)
+    expect(disconnectHandler).not.toBeCalled()
   })
 
   test('subscription', function (done) {
+    const connectHandler = jest.fn()
     const disconnectHandler = jest.fn()
-    const errorHandler = jest.fn(error => {
-      throw error
-    })
-    plugin.on('connect', () => {
-      plugin.subscribe(TEST_ADDRESS).catch(done)
-    })
-
+    const errorHandler = jest.fn()
+    plugin.on('connect', connectHandler)
+    plugin.on('disconnect', disconnectHandler)
+    plugin.on('error', errorHandler)
     plugin.on('update', data => {
+      expect(connectHandler).toBeCalled()
       expect(disconnectHandler).not.toBeCalled()
+      expect(errorHandler).not.toBeCalled()
       expect(data.address).toBe(TEST_ADDRESS)
       done()
     })
-    plugin.on('disconnect', disconnectHandler)
-    plugin.on('error', errorHandler)
+    plugin.subscribe(TEST_ADDRESS).catch(err => {
+      done(err)
+    })
   })
 
-  test('scanAddress behavior', function (done) {
-    const errorHandler = jest.fn(error => {
-      throw error
-    })
-    plugin.on('connect', () => {
-      handleConnect().catch(done)
-    })
-
-    async function handleConnect(): Promise<void> {
-      if (plugin.scanAddress != null) {
-        const resultNoCheckpoint = await plugin.scanAddress(TEST_ADDRESS)
-        expect(resultNoCheckpoint).toBe(true)
-        const resultLowCheckpoint = await plugin.scanAddress(
-          TEST_ADDRESS,
-          LOW_CHECKPOINT
-        )
-        expect(resultLowCheckpoint).toBe(true)
-        const resultHighCheckpoint = await plugin.scanAddress(
-          TEST_ADDRESS,
-          HIGH_CHECKPOINT
-        )
-        expect(resultHighCheckpoint).toBe(false)
-        done()
-      } else {
-        done('missing scanAddress')
-      }
-    }
-
+  test('scanAddress behavior', async function () {
+    const errorHandler = jest.fn()
     plugin.on('error', errorHandler)
+
+    if (plugin.scanAddress == null) {
+      throw new Error('missing scanAddress')
+    }
+    await plugin.subscribe(TEST_ADDRESS)
+    const resultNoCheckpoint = await plugin.scanAddress(TEST_ADDRESS)
+    expect(resultNoCheckpoint).toBe(true)
+    const resultLowCheckpoint = await plugin.scanAddress(
+      TEST_ADDRESS,
+      LOW_CHECKPOINT
+    )
+    expect(resultLowCheckpoint).toBe(true)
+    const resultHighCheckpoint = await plugin.scanAddress(
+      TEST_ADDRESS,
+      HIGH_CHECKPOINT
+    )
+    expect(resultHighCheckpoint).toBe(false)
+    expect(errorHandler).not.toBeCalled()
   })
 })

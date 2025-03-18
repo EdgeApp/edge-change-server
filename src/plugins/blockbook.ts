@@ -5,6 +5,8 @@ import { messageToString } from '../messageToString'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { blockbookProtocol } from '../types/blockbookProtocol'
 
+const MAX_ADDRESS_COUNT_PER_CONNECTION = 100
+
 export interface BlockbookOptions {
   pluginId: string
 
@@ -12,67 +14,136 @@ export interface BlockbookOptions {
   url: string
 }
 
+interface Connection {
+  addresses: string[]
+  codec: ReturnType<typeof blockbookProtocol.makeClientCodec>
+  socketReady: Promise<void>
+  ws: WebSocket
+}
+
 export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   const { pluginId, url } = opts
 
-  const ws = new WebSocket(url)
   const [on, emit] = makeEvents<PluginEvents>()
-  const codec = blockbookProtocol.makeClientCodec({
-    handleError(error) {
-      emit('error', error)
-    },
-    async handleSend(text) {
-      ws.send(text)
-    },
-    localMethods: {
-      subscribeAddresses({ address }) {
-        emit('update', { address })
+
+  const addressToConnectionIndex = new Map<string, number>()
+  const connections: Connection[] = []
+
+  function makeConnection(): Connection {
+    const ws = new WebSocket(url)
+    const codec = blockbookProtocol.makeClientCodec({
+      handleError,
+      async handleSend(text) {
+        ws.send(text)
+      },
+      localMethods: {
+        subscribeAddresses
       }
+    })
+    ws.on('message', message => {
+      const text = messageToString(message)
+      codec.handleMessage(text)
+    })
+    const socketReady = new Promise<void>(resolve => {
+      ws.on('open', () => {
+        emit('connect', undefined)
+        resolve()
+      })
+    })
+    ws.on('close', () => {
+      codec.handleClose()
+      emit('disconnect', undefined)
+      // TODO: Reconnect
+    })
+    ws.on('error', handleError)
+    return {
+      addresses: [],
+      codec,
+      socketReady,
+      ws
     }
-  })
+  }
+
+  function getAddressConnection(address: string): Connection | undefined {
+    const connectionIndex = addressToConnectionIndex.get(address)
+    if (connectionIndex == null) return
+    return connections[connectionIndex]
+  }
+
+  function setAddressConnection(address: string): Connection {
+    let connection: Connection = connections[connections.length - 1]
+    if (
+      connection == null ||
+      connection.addresses.length === MAX_ADDRESS_COUNT_PER_CONNECTION
+    ) {
+      connection = makeConnection()
+      connections.push(connection)
+    }
+    connection.addresses.push(address)
+    addressToConnectionIndex.set(address, connections.length - 1)
+    return connection
+  }
+
+  function removeAddressConnection(address: string): Connection | undefined {
+    const connectionIndex = addressToConnectionIndex.get(address)
+    if (connectionIndex == null) return
+    const connection: Connection = connections[connectionIndex]
+    const addressIndex = connection.addresses.indexOf(address)
+    connection.addresses.splice(addressIndex, 1)
+    addressToConnectionIndex.delete(address)
+    if (connection.addresses.length === 0) {
+      connection.ws.close()
+      // TODO: Splice the connection out of array and update the addressToConnectionIndex table
+    }
+    return connection
+  }
+
+  function handleError(error: unknown): void {
+    emit('error', error)
+  }
+  function subscribeAddresses({ address }: { address: string }): void {
+    emit('update', { address })
+  }
 
   const pingInterval = setInterval(() => {
-    codec.remoteMethods.ping(undefined).catch(error => {
-      console.error('ping error:', error)
-    })
+    for (const connection of connections) {
+      connection.codec.remoteMethods.ping(undefined).catch(error => {
+        console.error('ping error:', error)
+      })
+    }
   }, 50000)
-
-  ws.on('message', message => {
-    const text = messageToString(message)
-    codec.handleMessage(text)
-  })
-  ws.on('open', () => {
-    emit('connect', undefined)
-  })
-  ws.on('close', () => {
-    codec.handleClose()
-    emit('disconnect', undefined)
-    // TODO: Reconnect
-  })
-  ws.on('error', error => {
-    emit('error', error)
-  })
 
   return {
     pluginId,
     on,
 
     async subscribe(address) {
-      const result = await codec.remoteMethods.subscribeAddresses({
-        addresses: [address]
+      const connection =
+        getAddressConnection(address) ?? setAddressConnection(address)
+      await connection.socketReady
+      const result = await connection.codec.remoteMethods.subscribeAddresses({
+        addresses: connection.addresses
       })
       return result.subscribed
     },
 
     async unsubscribe(address) {
-      const result = await codec.remoteMethods.unsubscribeAddresses({
-        addresses: [address]
+      const connection = removeAddressConnection(address)
+      if (connection == null) return false
+      await connection.socketReady
+      const result = await connection.codec.remoteMethods.unsubscribeAddresses({
+        addresses: connection.addresses
       })
       return result.subscribed
     },
 
     async scanAddress(address, checkpoint): Promise<boolean> {
-      const out = await codec.remoteMethods.getAccountInfo({
+      const connection = getAddressConnection(address)
+      if (connection == null) {
+        throw new Error(`Missing connection for address: ${address}`)
+      }
+      await connection.socketReady
+      const out = await connection.codec.remoteMethods.getAccountInfo({
         descriptor: address,
         details: 'txids',
         tokens: undefined,
@@ -91,7 +162,9 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     },
 
     destroy() {
-      ws.close()
+      for (const connection of connections) {
+        connection.ws.close()
+      }
       clearInterval(pingInterval)
     }
   }
