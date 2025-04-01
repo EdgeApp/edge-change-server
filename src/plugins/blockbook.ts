@@ -10,6 +10,9 @@ const MAX_ADDRESS_COUNT_PER_CONNECTION = 100
 export interface BlockbookOptions {
   pluginId: string
 
+  /** A clean URL for logging */
+  safeUrl?: string
+
   /** The actual connection URL */
   url: string
 }
@@ -22,12 +25,25 @@ interface Connection {
 }
 
 export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
-  const { pluginId, url } = opts
+  const { pluginId, safeUrl = opts.url, url } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
 
   const addressToConnectionIndex = new Map<string, number>()
   const connections: Connection[] = []
+
+  const logPrefix = `${pluginId} (${safeUrl}):`
+  const logger = {
+    log: (...args: unknown[]): void => {
+      console.log(logPrefix, ...args)
+    },
+    error: (...args: unknown[]): void => {
+      console.error(logPrefix, ...args)
+    },
+    warn: (...args: unknown[]): void => {
+      console.warn(logPrefix, ...args)
+    }
+  }
 
   function makeConnection(): Connection {
     const ws = new WebSocket(url)
@@ -99,7 +115,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   }
 
   function handleError(error: unknown): void {
-    console.warn('WebSocket error:', error)
+    logger.warn('WebSocket error:', error)
   }
   function subscribeAddresses({ address }: { address: string }): void {
     emit('update', { address })
@@ -108,7 +124,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   setInterval(() => {
     for (const connection of connections) {
       connection.codec.remoteMethods.ping(undefined).catch(error => {
-        console.error('ping error:', error)
+        logger.error('ping error:', error)
       })
     }
   }, 50000)
