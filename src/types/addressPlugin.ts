@@ -3,7 +3,6 @@ import { OnEvents } from 'yavent'
 export interface PluginEvents {
   connect: undefined
   disconnect: undefined
-  error: unknown
   update: { address: string; checkpoint?: string }
 }
 

@@ -1,5 +1,6 @@
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -131,12 +132,16 @@ describe('blockbook plugin', function () {
     blockbookWsServer.close()
   })
 
+  const consoleWarnSpy = jest.spyOn(console, 'warn')
   let plugin: AddressPlugin
   beforeEach(() => {
     plugin = makeBlockbook({
       pluginId: 'test',
       url: mockBlockbookUrl
     })
+  })
+  afterEach(() => {
+    consoleWarnSpy.mockClear()
   })
 
   test('plugin instantiation and connection', async function () {
@@ -156,14 +161,12 @@ describe('blockbook plugin', function () {
   test('subscription', function (done) {
     const connectHandler = jest.fn()
     const disconnectHandler = jest.fn()
-    const errorHandler = jest.fn()
     plugin.on('connect', connectHandler)
     plugin.on('disconnect', disconnectHandler)
-    plugin.on('error', errorHandler)
     plugin.on('update', data => {
       expect(connectHandler).toBeCalled()
       expect(disconnectHandler).not.toBeCalled()
-      expect(errorHandler).not.toBeCalled()
+      expect(consoleWarnSpy).not.toBeCalled()
       expect(data.address).toBe(TEST_ADDRESS)
       done()
     })
@@ -173,9 +176,6 @@ describe('blockbook plugin', function () {
   })
 
   test('scanAddress behavior', async function () {
-    const errorHandler = jest.fn()
-    plugin.on('error', errorHandler)
-
     if (plugin.scanAddress == null) {
       throw new Error('missing scanAddress')
     }
@@ -192,6 +192,6 @@ describe('blockbook plugin', function () {
       HIGH_CHECKPOINT
     )
     expect(resultHighCheckpoint).toBe(false)
-    expect(errorHandler).not.toBeCalled()
+    expect(consoleWarnSpy).not.toBeCalled()
   })
 })

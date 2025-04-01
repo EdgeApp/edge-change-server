@@ -99,7 +99,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   }
 
   function handleError(error: unknown): void {
-    emit('error', error)
+    console.warn('WebSocket error:', error)
   }
   function subscribeAddresses({ address }: { address: string }): void {
     emit('update', { address })

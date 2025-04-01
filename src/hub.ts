@@ -104,9 +104,6 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
       }
     })
 
-    plugin.on('error', error => {
-      console.error(`${pluginId} plugin error:`, error)
-    })
     const pluginRow: PluginRow = {
       addressSubscriptions: new Map(),
       plugin
