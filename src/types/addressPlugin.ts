@@ -18,6 +18,4 @@ export interface AddressPlugin {
 
   // Not all plugins support scanning:
   scanAddress?: (address: string, checkpoint?: string) => Promise<boolean>
-
-  destroy: () => void
 }

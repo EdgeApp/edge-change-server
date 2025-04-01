@@ -22,8 +22,6 @@ export function makeFakePlugin(): AddressPlugin {
 
     async scanAddress(address, checkpoint): Promise<boolean> {
       return false
-    },
-
-    destroy() {}
+    }
   }
 }

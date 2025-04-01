@@ -1,6 +1,5 @@
 import {
   afterAll,
-  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -138,9 +137,6 @@ describe('blockbook plugin', function () {
       pluginId: 'test',
       url: mockBlockbookUrl
     })
-  })
-  afterEach(() => {
-    plugin.destroy()
   })
 
   test('plugin instantiation and connection', async function () {

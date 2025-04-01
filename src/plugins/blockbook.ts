@@ -105,7 +105,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     emit('update', { address })
   }
 
-  const pingInterval = setInterval(() => {
+  setInterval(() => {
     for (const connection of connections) {
       connection.codec.remoteMethods.ping(undefined).catch(error => {
         console.error('ping error:', error)
@@ -159,13 +159,6 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
       if (out.unconfirmedTxs > 0) return true
       if (out.txids != null && out.txids.length > 0) return true
       return false
-    },
-
-    destroy() {
-      for (const connection of connections) {
-        connection.ws.close()
-      }
-      clearInterval(pingInterval)
     }
   }
 }

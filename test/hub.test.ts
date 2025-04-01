@@ -56,8 +56,7 @@ describe('AddressHub', function () {
             }
             return true
           }
-        : undefined,
-      destroy() {}
+        : undefined
     }
   }
 
