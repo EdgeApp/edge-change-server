@@ -1,8 +1,7 @@
 import { OnEvents } from 'yavent'
 
 export interface PluginEvents {
-  connect: undefined
-  disconnect: undefined
+  subLost: { addresses: string[] }
   update: { address: string; checkpoint?: string }
 }
 

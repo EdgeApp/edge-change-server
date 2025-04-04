@@ -69,6 +69,11 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
   // Build our tables:
   for (const plugin of plugins) {
     const { pluginId } = plugin
+    const pluginRow: PluginRow = {
+      addressSubscriptions: new Map(),
+      plugin
+    }
+
     plugin.on('update', ({ address, checkpoint }) => {
       eventCounter.inc({ pluginId })
       const socketIds = pluginRow.addressSubscriptions.get(address)
@@ -81,13 +86,10 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
       }
     })
 
-    plugin.on('connect', () => {
-      pluginGauge.inc({ pluginId })
-    })
-
-    plugin.on('disconnect', () => {
+    plugin.on('subLost', params => {
       pluginGauge.dec({ pluginId })
-      for (const [address, socketIds] of pluginRow.addressSubscriptions) {
+      for (const address of params.addresses) {
+        const socketIds = pluginRow.addressSubscriptions.get(address)
         if (socketIds == null) continue
         for (const socketId of socketIds) {
           const codec = codecMap.get(socketId)
@@ -98,10 +100,6 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
       }
     })
 
-    const pluginRow: PluginRow = {
-      addressSubscriptions: new Map(),
-      plugin
-    }
     pluginMap.set(pluginId, pluginRow)
   }
 

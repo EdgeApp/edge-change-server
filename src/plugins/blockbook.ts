@@ -8,6 +8,16 @@ import { blockbookProtocol } from '../types/blockbookProtocol'
 
 const MAX_ADDRESS_COUNT_PER_CONNECTION = 100
 
+const pluginConnectionCounter = new Counter({
+  name: 'change_blockbook_websocket_connection_count',
+  help: 'Total number of WebSocket connections',
+  labelNames: ['pluginId', 'url'] as const
+})
+const pluginDisconnectionCounter = new Counter({
+  name: 'change_blockbook_websocket_disconnection_count',
+  help: 'Total number of WebSocket disconnections',
+  labelNames: ['pluginId', 'url'] as const
+})
 const pluginErrorCounter = new Counter({
   name: 'change_blockbook_error_count',
   help: 'Total number of WebSocket errors handled',
@@ -69,14 +79,20 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     })
     const socketReady = new Promise<void>(resolve => {
       ws.on('open', () => {
-        emit('connect', undefined)
+        pluginConnectionCounter.inc({ pluginId, url: safeUrl })
         resolve()
       })
     })
     ws.on('close', () => {
+      pluginDisconnectionCounter.inc({ pluginId, url: safeUrl })
       codec.handleClose()
-      emit('disconnect', undefined)
-      // TODO: Reconnect
+      // Remove connection from connections array
+      connections.splice(connections.indexOf(connection), 1)
+      // Remove connection from addressToConnection map
+      for (const address of connection.addresses) {
+        addressToConnection.delete(address)
+      }
+      emit('subLost', { addresses: connection.addresses })
     })
     ws.on('error', handleError)
     const connection: Connection = {

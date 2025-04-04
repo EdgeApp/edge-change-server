@@ -108,7 +108,7 @@ describe('blockbook plugin', function () {
 
             throw new Error('Function not implemented.')
           },
-          unsubscribeAddresses: function (params) {
+          unsubscribeAddresses: function (_params) {
             throw new Error('Function not implemented.')
           },
           ping: async function () {
@@ -147,24 +147,15 @@ describe('blockbook plugin', function () {
   test('plugin instantiation and connection', async function () {
     const disconnectHandler = jest.fn()
     expect(plugin.pluginId).toBe('test')
-    const connectPromise = new Promise<void>(resolve => {
-      plugin.on('connect', () => {
-        resolve()
-      })
-    })
+    plugin.on('subLost', disconnectHandler)
     await plugin.subscribe(TEST_ADDRESS)
-    await connectPromise
-    plugin.on('disconnect', disconnectHandler)
     expect(disconnectHandler).not.toBeCalled()
   })
 
   test('subscription', function (done) {
-    const connectHandler = jest.fn()
     const disconnectHandler = jest.fn()
-    plugin.on('connect', connectHandler)
-    plugin.on('disconnect', disconnectHandler)
+    plugin.on('subLost', disconnectHandler)
     plugin.on('update', data => {
-      expect(connectHandler).toBeCalled()
       expect(disconnectHandler).not.toBeCalled()
       expect(consoleWarnSpy).not.toBeCalled()
       expect(data.address).toBe(TEST_ADDRESS)

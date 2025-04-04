@@ -34,9 +34,6 @@ describe('AddressHub', function () {
     pluginId: string,
     canScanAddress: boolean
   ): AddressPlugin {
-    setTimeout(() => {
-      pluginEmitter('connect', undefined)
-    }, 100)
     return {
       pluginId,
       on: pluginEvents,
@@ -179,7 +176,7 @@ describe('AddressHub', function () {
     await changeClient.remoteMethods.subscribe([
       [SCANNABLE_PLUGIN_ID, TEST_ADDRESS]
     ])
-    pluginEmitter('disconnect', undefined)
+    pluginEmitter('subLost', { addresses: [TEST_ADDRESS] })
     await waitForExpect(() => {
       expect(subLost).toBeCalledWith([SCANNABLE_PLUGIN_ID, TEST_ADDRESS])
     })
