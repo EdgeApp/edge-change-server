@@ -87,13 +87,14 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
 
     plugin.on('disconnect', () => {
       pluginGauge.dec({ pluginId })
-      for (const [, socketIds] of pluginRow.addressSubscriptions) {
+      for (const [address, socketIds] of pluginRow.addressSubscriptions) {
         if (socketIds == null) continue
         for (const socketId of socketIds) {
           const codec = codecMap.get(socketId)
           if (codec == null) continue
-          codec.remoteMethods.pluginDisconnect({ pluginId })
+          codec.remoteMethods.subLost([pluginId, address])
         }
+        pluginRow.addressSubscriptions.delete(address)
       }
     })
 

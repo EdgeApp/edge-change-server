@@ -1,6 +1,5 @@
 import {
   asArray,
-  asObject,
   asOptional,
   asString,
   asTuple,
@@ -25,9 +24,9 @@ export type SubscribeParams = [
 ]
 
 const asSubscribeParams = asTuple<SubscribeParams>(
-  asString,
-  asString,
-  asOptional(asString)
+  asString, // pluginId
+  asString, // address
+  asOptional(asString) // checkpoint
 )
 
 export type SubscribeResult =
@@ -58,8 +57,8 @@ export const changeProtocol = makeRpcProtocol({
     update: {
       asParams: asSubscribeParams
     },
-    pluginDisconnect: {
-      asParams: asObject({ pluginId: asString })
+    subLost: {
+      asParams: asSubscribeParams
     }
   }
 })

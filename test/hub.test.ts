@@ -83,7 +83,7 @@ describe('AddressHub', function () {
   let changeClient: ReturnType<typeof changeProtocol.makeClientCodec>
   const handleError = jest.fn()
   const update = jest.fn()
-  const pluginDisconnect = jest.fn()
+  const subLost = jest.fn()
   const ready = jest.fn()
   beforeEach(() => {
     clientWs = new WebSocket(serverUrl)
@@ -94,7 +94,7 @@ describe('AddressHub', function () {
       },
       localMethods: {
         update,
-        pluginDisconnect
+        subLost
       }
     })
     clientWs.on('open', ready)
@@ -106,7 +106,7 @@ describe('AddressHub', function () {
   afterEach(() => {
     handleError.mockClear()
     update.mockClear()
-    pluginDisconnect.mockClear()
+    subLost.mockClear()
     ready.mockClear()
     clientWs.close()
   })
@@ -172,7 +172,7 @@ describe('AddressHub', function () {
     })
   })
 
-  test('plugin disconnect should trigger pluginDisconnect method', async function () {
+  test('plugin disconnect should trigger subLost method', async function () {
     await waitForExpect(() => {
       expect(ready).toBeCalled()
     })
@@ -181,9 +181,7 @@ describe('AddressHub', function () {
     ])
     pluginEmitter('disconnect', undefined)
     await waitForExpect(() => {
-      expect(pluginDisconnect).toBeCalledWith({
-        pluginId: SCANNABLE_PLUGIN_ID
-      })
+      expect(subLost).toBeCalledWith([SCANNABLE_PLUGIN_ID, TEST_ADDRESS])
     })
   })
 })
