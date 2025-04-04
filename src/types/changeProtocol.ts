@@ -58,9 +58,6 @@ export const changeProtocol = makeRpcProtocol({
     update: {
       asParams: asSubscribeParams
     },
-    pluginConnect: {
-      asParams: asObject({ pluginId: asString })
-    },
     pluginDisconnect: {
       asParams: asObject({ pluginId: asString })
     }

@@ -83,7 +83,6 @@ describe('AddressHub', function () {
   let changeClient: ReturnType<typeof changeProtocol.makeClientCodec>
   const handleError = jest.fn()
   const update = jest.fn()
-  const pluginConnect = jest.fn()
   const pluginDisconnect = jest.fn()
   const ready = jest.fn()
   beforeEach(() => {
@@ -95,7 +94,6 @@ describe('AddressHub', function () {
       },
       localMethods: {
         update,
-        pluginConnect,
         pluginDisconnect
       }
     })
@@ -108,7 +106,6 @@ describe('AddressHub', function () {
   afterEach(() => {
     handleError.mockClear()
     update.mockClear()
-    pluginConnect.mockClear()
     pluginDisconnect.mockClear()
     ready.mockClear()
     clientWs.close()
@@ -175,11 +172,10 @@ describe('AddressHub', function () {
     })
   })
 
-  test('plugin disconnect/reconnect', async function () {
+  test('plugin disconnect should trigger pluginDisconnect method', async function () {
     await waitForExpect(() => {
       expect(ready).toBeCalled()
     })
-    expect(pluginConnect).not.toBeCalled()
     await changeClient.remoteMethods.subscribe([
       [SCANNABLE_PLUGIN_ID, TEST_ADDRESS]
     ])
@@ -189,24 +185,5 @@ describe('AddressHub', function () {
         pluginId: SCANNABLE_PLUGIN_ID
       })
     })
-    pluginEmitter('connect', undefined)
-    await waitForExpect(() => {
-      expect(pluginConnect).toBeCalledWith({
-        pluginId: SCANNABLE_PLUGIN_ID
-      })
-    })
-    await changeClient.remoteMethods.unsubscribe([
-      [SCANNABLE_PLUGIN_ID, TEST_ADDRESS]
-    ])
-    pluginConnect.mockClear()
-    pluginDisconnect.mockClear()
-    expect(pluginConnect).not.toBeCalled()
-    expect(pluginDisconnect).not.toBeCalled()
-    pluginEmitter('disconnect', undefined)
-    expect(pluginConnect).not.toBeCalled()
-    expect(pluginDisconnect).not.toBeCalled()
-    pluginEmitter('connect', undefined)
-    expect(pluginConnect).not.toBeCalled()
-    expect(pluginDisconnect).not.toBeCalled()
   })
 })

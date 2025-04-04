@@ -38,7 +38,6 @@ async function main(): Promise<void> {
       update([pluginId, address, checkpoint = 'no checkpoint']) {
         print(`\nUpdate: ${pluginId} ${address} ${checkpoint}`)
       },
-      pluginConnect() {},
       pluginDisconnect() {}
     }
   })
