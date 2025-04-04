@@ -1,11 +1,4 @@
-import {
-  asArray,
-  asOptional,
-  asString,
-  asTuple,
-  asValue,
-  Cleaner
-} from 'cleaners'
+import { asArray, asOptional, asString, asTuple, asValue } from 'cleaners'
 
 import { makeRpcProtocol } from '../jsonRpc'
 
@@ -29,16 +22,17 @@ const asSubscribeParams = asTuple<SubscribeParams>(
   asOptional(asString) // checkpoint
 )
 
-export type SubscribeResult =
-  /** Subscribe failed */
-  | 0
+export type SubscribeResult = ReturnType<typeof asSubscribeResult>
+const asSubscribeResult = asValue(
+  /** Subscribe failed; not supported */
+  -1,
+  /** Subscribe failed; some thing went wrong */
+  0,
   /** Subscribe succeeded, no changes */
-  | 1
+  1,
   /** Subscribed succeeded, changes present */
-  | 2
-// export type SubscribeResult = boolean
-
-const asSubscribeResult: Cleaner<SubscribeResult> = asValue(0, 1, 2)
+  2
+)
 
 export const changeProtocol = makeRpcProtocol({
   serverMethods: {

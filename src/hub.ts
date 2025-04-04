@@ -178,7 +178,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
                 async (param): Promise<SubscribeResult> => {
                   const [pluginId, address, checkpoint] = param
                   const pluginRow = pluginMap.get(pluginId)
-                  if (pluginRow == null) return 0
+                  if (pluginRow == null) return -1 // No support
 
                   // Subscribe to the addresses:
                   const success = await subscribeClientToPluginAddress(
@@ -186,7 +186,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
                     pluginRow,
                     address
                   )
-                  if (!success) return 0
+                  if (!success) return 0 // Failed for whatever reason
 
                   // If the plugin can't scan, let the client do it:
                   if (pluginRow.plugin.scanAddress == null) return 0
