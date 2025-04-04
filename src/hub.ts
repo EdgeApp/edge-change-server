@@ -4,8 +4,8 @@ import WebSocket from 'ws'
 import { messageToString } from './messageToString'
 import { AddressPlugin } from './types/addressPlugin'
 import {
-  AddressTuple,
   changeProtocol,
+  SubscribeParams,
   SubscribeResult
 } from './types/changeProtocol'
 
@@ -175,7 +175,9 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
         },
 
         localMethods: {
-          async subscribe(params: AddressTuple[]): Promise<SubscribeResult[]> {
+          async subscribe(
+            params: SubscribeParams[]
+          ): Promise<SubscribeResult[]> {
             log(`subscribing ${params.length}`)
 
             // Do the initial scan:
@@ -213,7 +215,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
             return result
           },
 
-          async unsubscribe(params: AddressTuple[]): Promise<undefined> {
+          async unsubscribe(params: SubscribeParams[]): Promise<undefined> {
             log(`unsubscribed ${params.length}`)
 
             for (const param of params) {

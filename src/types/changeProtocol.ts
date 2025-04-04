@@ -13,7 +13,7 @@ import { makeRpcProtocol } from '../jsonRpc'
 /**
  * A chain and address identifier, like `['bitcoin', '19z88q...']`
  */
-export type AddressTuple = [
+export type SubscribeParams = [
   pluginId: string,
   address: string,
 
@@ -24,7 +24,7 @@ export type AddressTuple = [
   checkpoint?: string
 ]
 
-const asAddress = asTuple<AddressTuple>(
+const asSubscribeParams = asTuple<SubscribeParams>(
   asString,
   asString,
   asOptional(asString)
@@ -40,24 +40,23 @@ export type SubscribeResult =
 // export type SubscribeResult = boolean
 
 const asSubscribeResult: Cleaner<SubscribeResult> = asValue(0, 1, 2)
-// const asSubscribeResult: Cleaner<SubscribeResult> = asBoolean
 
 export const changeProtocol = makeRpcProtocol({
   serverMethods: {
     subscribe: {
-      asParams: asArray(asAddress),
+      asParams: asArray(asSubscribeParams),
       asResult: asArray(asSubscribeResult)
     },
 
     unsubscribe: {
-      asParams: asArray(asAddress),
+      asParams: asArray(asSubscribeParams),
       asResult: asValue(undefined)
     }
   },
 
   clientMethods: {
     update: {
-      asParams: asAddress
+      asParams: asSubscribeParams
     },
     pluginConnect: {
       asParams: asObject({ pluginId: asString })
