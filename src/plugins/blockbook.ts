@@ -36,7 +36,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
   const [on, emit] = makeEvents<PluginEvents>()
 
-  const addressToConnectionIndex = new Map<string, number>()
+  const addressToConnection = new Map<string, Connection>()
   const connections: Connection[] = []
 
   const logPrefix = `${pluginId} (${safeUrl}):`
@@ -79,18 +79,13 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
       // TODO: Reconnect
     })
     ws.on('error', handleError)
-    return {
+    const connection: Connection = {
       addresses: [],
       codec,
       socketReady,
       ws
     }
-  }
-
-  function getAddressConnection(address: string): Connection | undefined {
-    const connectionIndex = addressToConnectionIndex.get(address)
-    if (connectionIndex == null) return
-    return connections[connectionIndex]
+    return connection
   }
 
   function setAddressConnection(address: string): Connection {
@@ -103,20 +98,19 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
       connections.push(connection)
     }
     connection.addresses.push(address)
-    addressToConnectionIndex.set(address, connections.length - 1)
+    addressToConnection.set(address, connection)
     return connection
   }
 
   function removeAddressConnection(address: string): Connection | undefined {
-    const connectionIndex = addressToConnectionIndex.get(address)
-    if (connectionIndex == null) return
-    const connection: Connection = connections[connectionIndex]
+    const connection = addressToConnection.get(address)
+    if (connection == null) return
     const addressIndex = connection.addresses.indexOf(address)
     connection.addresses.splice(addressIndex, 1)
-    addressToConnectionIndex.delete(address)
+    addressToConnection.delete(address)
     if (connection.addresses.length === 0) {
       connection.ws.close()
-      // TODO: Splice the connection out of array and update the addressToConnectionIndex table
+      connections.splice(connections.indexOf(connection), 1)
     }
     return connection
   }
@@ -139,13 +133,13 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     }
   }, 50000)
 
-  return {
+  const blockbookPlugin: AddressPlugin = {
     pluginId,
     on,
 
     async subscribe(address) {
       const connection =
-        getAddressConnection(address) ?? setAddressConnection(address)
+        addressToConnection.get(address) ?? setAddressConnection(address)
       await connection.socketReady
       const result = await connection.codec.remoteMethods.subscribeAddresses({
         addresses: connection.addresses
@@ -164,7 +158,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     },
 
     async scanAddress(address, checkpoint): Promise<boolean> {
-      const connection = getAddressConnection(address)
+      const connection = addressToConnection.get(address)
       if (connection == null) {
         throw new Error(`Missing connection for address: ${address}`)
       }
@@ -187,4 +181,6 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
       return false
     }
   }
+
+  return blockbookPlugin
 }
