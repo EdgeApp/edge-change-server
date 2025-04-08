@@ -4,7 +4,10 @@ import { makeEvents } from 'yavent'
 
 import { messageToString } from '../messageToString'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
-import { blockbookProtocol } from '../types/blockbookProtocol'
+import {
+  blockbookProtocol,
+  BlockbookProtocolServer
+} from '../types/blockbookProtocol'
 
 const MAX_ADDRESS_COUNT_PER_CONNECTION = 100
 
@@ -48,6 +51,10 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
   const addressToConnection = new Map<string, Connection>()
   const connections: Connection[] = []
+  // Map of address to unconfirmed txids for tracking mempool transactions
+  const unconfirmedTxWatchlist = new Map<string, Set<string>>()
+  // Global connection for block notifications
+  let blockConnection: Connection | null = null
 
   const logPrefix = `${pluginId} (${safeUrl}):`
   const logger = {
@@ -70,7 +77,8 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
         ws.send(text)
       },
       localMethods: {
-        subscribeAddresses
+        subscribeAddresses,
+        subscribeNewBlock
       }
     })
     ws.on('message', message => {
@@ -85,14 +93,22 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     })
     ws.on('close', () => {
       pluginDisconnectionCounter.inc({ pluginId, url: safeUrl })
-      codec.handleClose()
-      // Remove connection from connections array
-      connections.splice(connections.indexOf(connection), 1)
-      // Remove connection from addressToConnection map
-      for (const address of connection.addresses) {
-        addressToConnection.delete(address)
+
+      if (connection === blockConnection) {
+        // If this was the block connection, re-init it.
+        blockConnection = null
+        initBlockConnection()
+      } else {
+        // If this is a connection for a plugin, remove it and emit a subLost event.
+        codec.handleClose()
+        // Remove connection from connections array
+        connections.splice(connections.indexOf(connection), 1)
+        // Remove connection from addressToConnection map
+        for (const address of connection.addresses) {
+          addressToConnection.delete(address)
+        }
+        emit('subLost', { addresses: connection.addresses })
       }
-      emit('subLost', { addresses: connection.addresses })
     })
     ws.on('error', handleError)
     const connection: Connection = {
@@ -102,6 +118,36 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
       ws
     }
     return connection
+  }
+
+  // Initialize a dedicated connection for block notifications
+  function initBlockConnection(): void {
+    if (blockConnection !== null) return
+
+    blockConnection = makeConnection()
+
+    blockConnection.socketReady
+      .then(() => {
+        // Subscribe to new blocks when the socket is open
+        blockConnection?.codec.remoteMethods
+          .subscribeNewBlock(undefined)
+          .then(result => {
+            if (result.subscribed) {
+              logger.log('Block connection initialized')
+            } else {
+              logger.error('Failed to subscribe to new blocks')
+            }
+          })
+          .catch(handleError)
+      })
+      .catch(handleError)
+  }
+
+  function watchUnconfirmedTx(address: string, txid: string): void {
+    if (!unconfirmedTxWatchlist.has(address)) {
+      unconfirmedTxWatchlist.set(address, new Set())
+    }
+    unconfirmedTxWatchlist.get(address)?.add(txid)
   }
 
   function setAddressConnection(address: string): Connection {
@@ -137,15 +183,98 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
     logger.warn('WebSocket error:', error)
   }
-  function subscribeAddresses({ address }: { address: string }): void {
+  function subscribeAddresses({
+    address,
+    tx
+  }: Parameters<
+    BlockbookProtocolServer['remoteMethods']['subscribeAddresses']
+  >[0]): void {
+    // Add the tx hash to a list of unconfirmed transactions
+    watchUnconfirmedTx(address, tx.txid)
     emit('update', { address })
   }
 
+  function subscribeNewBlock({
+    height
+  }: Parameters<
+    BlockbookProtocolServer['remoteMethods']['subscribeNewBlock']
+  >[0]): void {
+    // Check unconfirmed transactions and update clients
+    for (const [
+      address,
+      unconfirmedTxids
+    ] of unconfirmedTxWatchlist.entries()) {
+      const connection = addressToConnection.get(address)
+      if (connection == null) continue
+
+      connection.codec.remoteMethods
+        .getAccountInfo({
+          descriptor: address,
+          details: 'txslight',
+          tokens: undefined,
+          page: undefined,
+          pageSize: undefined,
+          from: undefined,
+          to: undefined,
+          contractFilter: undefined,
+          secondaryCurrency: undefined,
+          gap: undefined
+        })
+        .then(result => {
+          if (result.transactions === undefined) {
+            logger.error(
+              `Expected transactions for getAccountInfo query with 'txs' details parameter`
+            )
+            return
+          }
+
+          let hadConfirmation = false
+          // Remove confirmed transactions from unconfirmed set
+          for (const tx of result.transactions) {
+            if (unconfirmedTxids.has(tx.txid) && tx.confirmations > 0) {
+              hadConfirmation = true
+              unconfirmedTxids.delete(tx.txid)
+            }
+          }
+
+          if (unconfirmedTxids.size === 0) {
+            // No more unconfirmed txs, remove address from map
+            unconfirmedTxWatchlist.delete(address)
+          }
+
+          // Only emit update if a transaction was confirmed
+          if (hadConfirmation) {
+            emit('update', { address, checkpoint: height.toString() })
+          }
+        })
+        .catch((error: unknown) => handleError(error))
+    }
+  }
+
+  // Initialize block connection at startup
+  initBlockConnection()
+
   setInterval(() => {
+    // Ping all address connections
     for (const connection of connections) {
-      connection.codec.remoteMethods.ping(undefined).catch(error => {
-        logger.error('ping error:', error)
-      })
+      connection.socketReady
+        .then(async () => {
+          await connection.codec.remoteMethods.ping(undefined)
+        })
+        .catch(error => {
+          logger.error('ping error:', error)
+        })
+    }
+
+    // Ping block connection separately
+    if (blockConnection !== null) {
+      blockConnection.socketReady
+        .then(async () => {
+          await blockConnection?.codec.remoteMethods.ping(undefined)
+        })
+        .catch(error => {
+          logger.error('block connection ping error:', error)
+        })
     }
   }, 50000)
 
@@ -181,7 +310,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
       await connection.socketReady
       const out = await connection.codec.remoteMethods.getAccountInfo({
         descriptor: address,
-        details: 'txids',
+        details: 'txs',
         tokens: undefined,
         from: checkpoint == null ? checkpoint : parseInt(checkpoint),
         to: undefined,
@@ -192,8 +321,16 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
         gap: undefined
       })
 
+      // Add unconfirmed txs to the the watchlist
+      const transactions = out.transactions ?? []
+      for (const tx of transactions) {
+        if (tx.confirmations < 0) {
+          watchUnconfirmedTx(address, tx.txid)
+        }
+      }
+
       if (out.unconfirmedTxs > 0) return true
-      if (out.txids != null && out.txids.length > 0) return true
+      if (out.transactions != null && out.transactions.length > 0) return true
       return false
     }
   }

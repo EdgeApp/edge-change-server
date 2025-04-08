@@ -26,6 +26,9 @@ describe('blockbookProtocol server', function () {
         },
         async ping() {
           return {}
+        },
+        async subscribeNewBlock() {
+          return { subscribed: true }
         }
       }
     })
@@ -82,7 +85,8 @@ describe('blockbookProtocol client', function () {
         server.handleMessage(message)
       },
       localMethods: {
-        subscribeAddresses: clientSubscribeAddressesHandler
+        subscribeAddresses: clientSubscribeAddressesHandler,
+        subscribeNewBlock: jest.fn(async () => ({ height: 100, hash: '0000' }))
       }
     })
 
@@ -110,12 +114,23 @@ describe('blockbookProtocol client', function () {
         },
         async ping() {
           return {}
+        },
+        async subscribeNewBlock() {
+          return { subscribed: true }
         }
       }
     })
 
     async function sendUpdate(address: string): Promise<void> {
-      await server.remoteMethods.subscribeAddresses({ address })
+      const tx = {
+        txid: '1234',
+        hex: '5678',
+        blockHeight: 100,
+        confirmations: 1,
+        blockTime: Date.now(),
+        fees: '1000'
+      }
+      await server.remoteMethods.subscribeAddresses({ address, tx })
     }
 
     return {
@@ -174,7 +189,14 @@ describe('blockbookProtocol client', function () {
 
     await waitForExpect(() => {
       expect(clientSubscribeAddressesHandler).toBeCalledWith({
-        address
+        address,
+        tx: {
+          blockHeight: 100,
+          blockTime: expect.any(Number),
+          confirmations: 1,
+          fees: '1000',
+          txid: '1234'
+        }
       })
       expect(serverErrorHandler).not.toBeCalled()
       expect(clientErrorHandler).not.toBeCalled()

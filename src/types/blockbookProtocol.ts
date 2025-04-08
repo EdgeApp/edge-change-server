@@ -51,7 +51,16 @@ export const blockbookProtocol = makeRpcProtocol({
         page: asOptional(asNumber),
         totalPages: asOptional(asNumber),
         itemsOnPage: asOptional(asNumber),
-        transactions: asOptional(asArray(asUnknown)),
+        transactions: asOptional(
+          asArray(
+            asObject({
+              txid: asString,
+              blockHeight: asNumber,
+              confirmations: asNumber
+              // ...Other fields omitted for brevity (they're not needed)
+            })
+          )
+        ),
         txids: asOptional(asArray(asString))
       })
     },
@@ -69,6 +78,11 @@ export const blockbookProtocol = makeRpcProtocol({
     ping: {
       asParams: asUndefined,
       asResult: asObject({})
+    },
+
+    subscribeNewBlock: {
+      asParams: asUndefined,
+      asResult: asObject({ subscribed: asBoolean })
     }
 
     // estimateFee
@@ -82,7 +96,6 @@ export const blockbookProtocol = makeRpcProtocol({
     // getTransactionSpecific
     // sendTransaction
     // subscribeFiatRates
-    // subscribeNewBlock
     // subscribeNewTransaction
     // unsubscribeFiatRates
     // unsubscribeNewBlock
@@ -91,7 +104,56 @@ export const blockbookProtocol = makeRpcProtocol({
 
   clientMethods: {
     subscribeAddresses: {
-      asParams: asObject({ address: asString })
+      asParams: asObject({
+        address: asString,
+        tx: asObject({
+          txid: asString,
+          // hex: asString,
+          blockHeight: asNumber,
+          confirmations: asNumber,
+          blockTime: asNumber,
+          fees: asString
+          // vin: asArray(
+          //   asObject({
+          //     addresses: asOptional(asArray(asString), () => []),
+          //     // `isAddress` is a boolean flag that indicates whether the input is an address.
+          //     // And therefore has `addresses` field. If `isAddress` is false, then the input is likely a coinbase input.
+          //     isAddress: asBoolean,
+          //     // This is the index of the input. Not to be confused with the index of the previous output (vout).
+          //     n: asNumber,
+          //     // Empirically observed omitted sequence is possible for when sequence is zero.
+          //     // Is the case for tx `19ecc679cfc7e71ad616a22bbee96fd5abe8616e4f408f1f5daaf137400ae091`.
+          //     sequence: asOptional(asNumber, 0),
+          //     txid: asOptional(asString),
+          //     value: asOptional(asString, '0'),
+          //     // If Blockbook doesn't provide vout, assume 0. Empirically observed
+          //     // case for tx `fefac8c22ba1178df5d7c90b78cc1c203d1a9f5f5506f7b8f6f469fa821c2674`
+          //     // which has no `vout` for input in WebSocket response payload but block
+          //     // will show the input's vout value to be `0`.
+          //     vout: asOptional(asNumber, 0),
+          //     coinbase: asOptional(asString),
+          //     isOwn: asOptional(asBoolean),
+          //     hex: asOptional(asString),
+          //     asm: asOptional(asString)
+          //   })
+          // ),
+          // vout: asArray(
+          //   asObject({
+          //     n: asNumber,
+          //     value: asString,
+          //     addresses: asArray(asString),
+          //     hex: asOptional(asString)
+          //   })
+          // )
+        })
+      })
+    },
+
+    subscribeNewBlock: {
+      asParams: asObject({
+        height: asNumber,
+        hash: asString
+      })
     }
 
     // subscribeFiatRates
@@ -156,6 +218,14 @@ export const blockbookProtocol = makeRpcProtocol({
     }
   )
 })
+
+type BlockbookProtocol = typeof blockbookProtocol
+export type BlockbookProtocolServer = ReturnType<
+  BlockbookProtocol['makeServerCodec']
+>
+export type BlockbookProtocolClient = ReturnType<
+  BlockbookProtocol['makeClientCodec']
+>
 
 const asBlockbookId: Cleaner<string | number> = raw => {
   const clean = asString(raw)

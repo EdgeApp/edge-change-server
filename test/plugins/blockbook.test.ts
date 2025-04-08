@@ -47,7 +47,19 @@ describe('blockbook plugin', function () {
         localMethods: {
           async subscribeAddresses(params) {
             const [address] = params.addresses
-            codec.remoteMethods.subscribeAddresses({ address })
+            const tx = {
+              txid:
+                '0eb7b574373de2c88d0dc1444f49947c681d0437d21361f9ebb4dd09c62f2a66',
+              hex: '',
+              blockHeight: 0,
+              confirmations: 0,
+              blockTime: Date.now(),
+              fees: '0'
+            }
+            codec.remoteMethods.subscribeAddresses({ address, tx })
+            return { subscribed: true }
+          },
+          async subscribeNewBlock() {
             return { subscribed: true }
           },
           getAccountInfo: async function (params) {
@@ -62,12 +74,22 @@ describe('blockbook plugin', function () {
                 totalSent: '10106300',
                 unconfirmedBalance: '0',
                 unconfirmedTxs: 0,
-                transactions: undefined,
                 txs: 2,
-                txids: [
-                  '8c1e3dec662d1f2a5e322ccef5eca263f98eb16723c6f990be0c88c1db113fb1',
-                  '0eb7b574373de2c88d0dc1444f49947c681d0437d21361f9ebb4dd09c62f2a66'
-                ]
+                transactions: [
+                  {
+                    txid:
+                      '8c1e3dec662d1f2a5e322ccef5eca263f98eb16723c6f990be0c88c1db113fb1',
+                    blockHeight: 123,
+                    confirmations: 1
+                  },
+                  {
+                    txid:
+                      '0eb7b574373de2c88d0dc1444f49947c681d0437d21361f9ebb4dd09c62f2a66',
+                    blockHeight: 123,
+                    confirmations: 1
+                  }
+                ],
+                txids: []
               }
             }
             if (params.from === Number(LOW_CHECKPOINT)) {
@@ -81,12 +103,22 @@ describe('blockbook plugin', function () {
                 totalSent: '10106300',
                 unconfirmedBalance: '0',
                 unconfirmedTxs: 0,
-                transactions: undefined,
                 txs: 2,
-                txids: [
-                  '8c1e3dec662d1f2a5e322ccef5eca263f98eb16723c6f990be0c88c1db113fb1',
-                  '0eb7b574373de2c88d0dc1444f49947c681d0437d21361f9ebb4dd09c62f2a66'
-                ]
+                transactions: [
+                  {
+                    txid:
+                      '8c1e3dec662d1f2a5e322ccef5eca263f98eb16723c6f990be0c88c1db113fb1',
+                    blockHeight: 123,
+                    confirmations: 1
+                  },
+                  {
+                    txid:
+                      '0eb7b574373de2c88d0dc1444f49947c681d0437d21361f9ebb4dd09c62f2a66',
+                    blockHeight: 123,
+                    confirmations: 1
+                  }
+                ],
+                txids: []
               }
             }
             if (params.from === Number(HIGH_CHECKPOINT)) {
@@ -100,9 +132,9 @@ describe('blockbook plugin', function () {
                 totalSent: '10106300',
                 unconfirmedBalance: '0',
                 unconfirmedTxs: 0,
-                transactions: undefined,
                 txs: 2,
-                txids: undefined
+                transactions: undefined,
+                txids: []
               }
             }
 
@@ -152,7 +184,12 @@ describe('blockbook plugin', function () {
     expect(disconnectHandler).not.toBeCalled()
   })
 
-  test('subscription', function (done) {
+  test('subscribe should return true', async function () {
+    const result = await plugin.subscribe(TEST_ADDRESS)
+    expect(result).toBe(true)
+  })
+
+  test('subscription update should be received', function (done) {
     const disconnectHandler = jest.fn()
     plugin.on('subLost', disconnectHandler)
     plugin.on('update', data => {
