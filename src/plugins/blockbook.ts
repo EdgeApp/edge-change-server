@@ -1,3 +1,4 @@
+import { Counter } from 'prom-client'
 import WebSocket from 'ws'
 import { makeEvents } from 'yavent'
 
@@ -6,6 +7,12 @@ import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { blockbookProtocol } from '../types/blockbookProtocol'
 
 const MAX_ADDRESS_COUNT_PER_CONNECTION = 100
+
+const pluginErrorCounter = new Counter({
+  name: 'change_blockbook_error_count',
+  help: 'Total number of WebSocket errors handled',
+  labelNames: ['pluginId', 'url'] as const
+})
 
 export interface BlockbookOptions {
   pluginId: string
@@ -115,6 +122,9 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   }
 
   function handleError(error: unknown): void {
+    // Log to Prometheus:
+    pluginErrorCounter.inc({ pluginId, url: safeUrl })
+
     logger.warn('WebSocket error:', error)
   }
   function subscribeAddresses({ address }: { address: string }): void {
