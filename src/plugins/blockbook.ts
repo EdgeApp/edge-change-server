@@ -323,7 +323,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
     async unsubscribe(address) {
       const connection = removeAddressConnection(address)
-      if (connection == null) return false
+      if (connection == null || connection.addresses.length === 0) return false
       await connection.socketReady
       const result = await connection.codec.remoteMethods.unsubscribeAddresses({
         addresses: connection.addresses
