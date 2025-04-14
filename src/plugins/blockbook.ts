@@ -3,6 +3,7 @@ import { Counter } from 'prom-client'
 import WebSocket from 'ws'
 import { makeEvents } from 'yavent'
 
+import { snooze } from '../../test/util/snooze'
 import { messageToString } from '../messageToString'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import {
@@ -57,6 +58,28 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   // Global connection for block notifications
   let blockConnection: Connection | null = null
 
+  const getBlockConnectionReconnectDelay = (() => {
+    const ROUGH_RECONNECTION_TIME = 3000
+    let lastReconnectTime = 0
+    let currentDelay = 1000
+    return (): number => {
+      // Step-off algorithm:
+      // Delay for 1 second, then double the delay if reconnecting within the delay period
+      // Reset back to 1 second if outside the delay period.
+      const now = Date.now()
+      // If we're reconnecting within the current delay period, double the delay
+      if (now - lastReconnectTime < currentDelay + ROUGH_RECONNECTION_TIME) {
+        currentDelay *= 2
+      } else {
+        // Reset delay if we're outside the delay period
+        currentDelay = 1000
+      }
+      lastReconnectTime = now
+      // Max delay of 60 seconds
+      return Math.min(currentDelay, 60000)
+    }
+  })()
+
   const logPrefix = `${pluginId} (${safeUrl}):`
   const logger = {
     log: (...args: unknown[]): void => {
@@ -98,7 +121,11 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
       if (connection === blockConnection) {
         // If this was the block connection, re-init it.
         blockConnection = null
-        initBlockConnection()
+        snooze(getBlockConnectionReconnectDelay())
+          .then(() => initBlockConnection())
+          .catch(err => {
+            console.error('Failed to re-initialize block connection:', err)
+          })
       } else {
         // If this is a connection for a plugin, remove it and emit a subLost event.
         codec.handleClose()
