@@ -1,3 +1,4 @@
+import { makePeriodicTask } from 'edge-server-tools'
 import { Counter } from 'prom-client'
 import WebSocket from 'ws'
 import { makeEvents } from 'yavent'
@@ -254,7 +255,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   // Initialize block connection at startup
   initBlockConnection()
 
-  setInterval(() => {
+  const pingTask = makePeriodicTask(() => {
     // Ping all address connections
     for (const connection of connections) {
       connection.socketReady
@@ -277,6 +278,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
         })
     }
   }, 50000)
+  pingTask.start()
 
   const blockbookPlugin: AddressPlugin = {
     pluginId,

@@ -35,7 +35,7 @@
     "cleaner-config": "^0.1.7",
     "cleaners": "^0.3.16",
     "clipanion": "^3.2.0-rc.3",
-    "edge-server-tools": "^0.2.18",
+    "edge-server-tools": "^0.2.19",
     "node-fetch": "^2.6.0",
     "prom-client": "^15.1.0",
     "serverlet": "^0.1.1",
