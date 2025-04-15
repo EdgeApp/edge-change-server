@@ -1,18 +1,11 @@
-import {
-  asArray,
-  asOptional,
-  asString,
-  asTuple,
-  asValue,
-  Cleaner
-} from 'cleaners'
+import { asArray, asOptional, asString, asTuple, asValue } from 'cleaners'
 
 import { makeRpcProtocol } from '../jsonRpc'
 
 /**
  * A chain and address identifier, like `['bitcoin', '19z88q...']`
  */
-export type AddressTuple = [
+export type SubscribeParams = [
   pluginId: string,
   address: string,
 
@@ -23,38 +16,57 @@ export type AddressTuple = [
   checkpoint?: string
 ]
 
-const asAddress = asTuple<AddressTuple>(
-  asString,
-  asString,
-  asOptional(asString)
+const asSubscribeParams = asTuple<SubscribeParams>(
+  asString, // pluginId
+  asString, // address
+  asOptional(asString) // checkpoint
 )
 
-export type SubscribeResult =
-  /** Subscribe failed (unsupported chain) */
-  | 0
+export type SubscribeResult = ReturnType<typeof asSubscribeResult>
+const asSubscribeResult = asValue(
+  /** Subscribe failed; not supported */
+  -1,
+  /** Subscribe failed; some thing went wrong */
+  0,
   /** Subscribe succeeded, no changes */
-  | 1
+  1,
   /** Subscribed succeeded, changes present */
-  | 2
-
-const asSubscribeResult: Cleaner<SubscribeResult> = asValue(0, 1, 2)
+  2
+)
 
 export const changeProtocol = makeRpcProtocol({
   serverMethods: {
     subscribe: {
-      asParams: asArray(asAddress),
+      asParams: asArray(asSubscribeParams),
       asResult: asArray(asSubscribeResult)
     },
 
     unsubscribe: {
-      asParams: asArray(asAddress),
+      asParams: asArray(asSubscribeParams),
       asResult: asValue(undefined)
     }
   },
 
   clientMethods: {
     update: {
-      asParams: asAddress
+      asParams: asSubscribeParams
+    },
+    subLost: {
+      asParams: asSubscribeParams
     }
   }
 })
+
+// core:
+//   ws
+//   codec
+//   activePluginIds
+//   subcriptions: Map<pluginID, address[]>
+//
+// 1. Core connects
+// 2. Server sends pluginConnect
+// 3. Core foreach pluginId with wallets, subscribe
+// ...
+// 1. Server sends pluginDisconnect
+// 2. Core keeps updating subscriptions as if nothing happened
+// 3. Server sends pluginConnect

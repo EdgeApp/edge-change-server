@@ -4,7 +4,6 @@ import { AggregatorRegistry } from 'prom-client'
 import WebSocket from 'ws'
 
 import { makeAddressHub } from './hub'
-import { allPlugins } from './plugins/allPlugins'
 import { serverConfig } from './serverConfig'
 
 const aggregatorRegistry = new AggregatorRegistry()
@@ -49,6 +48,7 @@ function manageServers(): void {
 }
 
 async function server(): Promise<void> {
+  const { allPlugins } = await import('./plugins/allPlugins')
   const { listenPort, listenHost } = serverConfig
 
   const server = new WebSocket.Server({
@@ -57,7 +57,7 @@ async function server(): Promise<void> {
   })
   console.log(`WebSocket server listening on port ${listenPort}`)
 
-  const hub = makeAddressHub(allPlugins)
+  const hub = makeAddressHub({ plugins: allPlugins, log: console.log })
   server.on('connection', ws => hub.handleConnection(ws))
 }
 

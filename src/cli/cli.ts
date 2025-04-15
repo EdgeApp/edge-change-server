@@ -3,7 +3,7 @@ import { WebSocket } from 'ws'
 
 import { messageToString } from '../messageToString'
 import { serverConfig } from '../serverConfig'
-import { AddressTuple, changeProtocol } from '../types/changeProtocol'
+import { changeProtocol, SubscribeParams } from '../types/changeProtocol'
 
 const defaultMetrics = `http://${serverConfig.metricsHost}:${serverConfig.metricsPort}/metrics`
 const defaultSocket = `ws://${serverConfig.listenHost}:${serverConfig.listenPort}`
@@ -37,7 +37,8 @@ async function main(): Promise<void> {
     localMethods: {
       update([pluginId, address, checkpoint = 'no checkpoint']) {
         print(`\nUpdate: ${pluginId} ${address} ${checkpoint}`)
-      }
+      },
+      subLost() {}
     }
   })
 
@@ -82,7 +83,7 @@ async function main(): Promise<void> {
           print('No pluginId or address')
           return
         }
-        const params: AddressTuple = [pluginId, address, checkpoint]
+        const params: SubscribeParams = [pluginId, address, checkpoint]
         codec.remoteMethods.subscribe([params]).then(
           value => print('Subscribe result: ' + JSON.stringify(value)),
           error => print('Subscribe failed: ' + String(error))
@@ -96,7 +97,7 @@ async function main(): Promise<void> {
           print('No pluginId or address')
           return
         }
-        const params: AddressTuple = [pluginId, address]
+        const params: SubscribeParams = [pluginId, address]
         codec.remoteMethods.unsubscribe([params]).then(
           () => print('\nUnsubscribed'),
           error => print('\nUnsubscribe failed: ' + String(error))

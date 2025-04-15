@@ -74,14 +74,10 @@ interface MethodCleaners {
   }
 }
 
-/**
- * Accepts cleaners for the two sides of a protocol,
- * and returns a codec factory.
- */
-export function makeRpcProtocol<
+interface RpcProtocolOpts<
   ServerCleaners extends MethodCleaners,
   ClientCleaners extends MethodCleaners
->(opts: {
+> {
   /**
    * Methods supported on the server side.
    */
@@ -91,15 +87,57 @@ export function makeRpcProtocol<
    * Methods supported on the client side.
    */
   clientMethods: ClientCleaners
-}): RpcProtocol<Methods<ServerCleaners>, Methods<ClientCleaners>> {
-  const { serverMethods, clientMethods } = opts
+
+  /**
+   * Optionally used if the protocol differs from strict JSON-RPC 2.0.
+   */
+  asCall?: Cleaner<JsonRpcCall>
+  asReturn?: Cleaner<JsonRpcReturn>
+
+  /**
+   * Optionally allow multiple returns for subscriptions (default `false`).
+   */
+  allowMultipleReturns?: boolean
+}
+
+/**
+ * Accepts cleaners for the two sides of a protocol,
+ * and returns a codec factory.
+ */
+export function makeRpcProtocol<
+  ServerCleaners extends MethodCleaners,
+  ClientCleaners extends MethodCleaners
+>(
+  opts: RpcProtocolOpts<ServerCleaners, ClientCleaners>
+): RpcProtocol<Methods<ServerCleaners>, Methods<ClientCleaners>> {
+  const {
+    serverMethods,
+    clientMethods,
+    asCall = asJsonRpcCall,
+    asReturn = asJsonRpcReturn,
+    allowMultipleReturns = false
+  } = opts
 
   return {
     makeServerCodec(opts) {
-      return makeCodec(serverMethods, clientMethods, opts)
+      return makeCodec(
+        serverMethods,
+        clientMethods,
+        asCall,
+        asReturn,
+        allowMultipleReturns,
+        opts
+      )
     },
     makeClientCodec(opts) {
-      return makeCodec(clientMethods, serverMethods, opts)
+      return makeCodec(
+        clientMethods,
+        serverMethods,
+        asCall,
+        asReturn,
+        allowMultipleReturns,
+        opts
+      )
     }
   }
 }
@@ -123,55 +161,55 @@ type Methods<T> = {
 function makeCodec(
   localCleaners: MethodCleaners,
   remoteCleaners: MethodCleaners,
+  asCall: Cleaner<JsonRpcCall>,
+  asReturn: Cleaner<JsonRpcReturn>,
+  allowMultipleReturns: boolean,
   opts: RpcCodecOpts<any>
 ): RpcCodec<any> {
   const { handleError, handleSend, localMethods } = opts
+  const wasCall = uncleaner(asCall)
+  const wasReturn = uncleaner(asReturn)
 
   const sendError = async (
     code: number,
     message: string,
     id: RpcId = null
-  ): Promise<void> =>
-    await handleSend(
-      JSON.stringify(
-        wasJsonRpcReturn({
-          jsonrpc: '2.0',
-          result: undefined,
-          error: { code, message, data: undefined },
-          id
-        })
-      )
-    )
+  ): Promise<void> => {
+    const payload = wasReturn({
+      jsonrpc: '2.0',
+      result: undefined,
+      error: { code, message, data: undefined },
+      id
+    })
+    return await handleSend(JSON.stringify(payload))
+  }
 
   // Remote state:
   let nextRemoteId = 0
   const remoteCalls = new Map<number, PendingRemoteCall>()
+  const remoteSubscriptions = new Map<number | string, string>()
 
   // Create proxy functions for each remote method:
   const remoteMethods: {
     [name: string]: (params: unknown) => unknown
   } = {}
-  for (const name of Object.keys(remoteCleaners)) {
-    const { asParams, asResult } = remoteCleaners[name]
+  for (const methodName of Object.keys(remoteCleaners)) {
+    const { asParams, asResult } = remoteCleaners[methodName]
     const wasParams = uncleaner(asParams)
 
     if (asResult == null) {
       // It's a notification, so send the message with no result handling:
-      remoteMethods[name] = (params: unknown): void => {
-        handleSend(
-          JSON.stringify(
-            wasJsonRpcCall({
-              jsonrpc: '2.0',
-              method: name,
-              params: wasParams(params),
-              id: undefined
-            })
-          )
-        ).catch(handleError)
+      remoteMethods[methodName] = (params: unknown): void => {
+        const payload = wasCall({
+          jsonrpc: '2.0',
+          method: methodName,
+          params: wasParams(params)
+        })
+        handleSend(JSON.stringify(payload)).catch(handleError)
       }
     } else {
       // It's a method call, so sign up to receive a result:
-      remoteMethods[name] = (params: unknown): unknown => {
+      remoteMethods[methodName] = (params: unknown): unknown => {
         const id = nextRemoteId++
         const out = new Promise<unknown>((resolve, reject) => {
           remoteCalls.set(id, {
@@ -181,16 +219,24 @@ function makeCodec(
           })
         })
 
-        handleSend(
-          JSON.stringify(
-            wasJsonRpcCall({
-              jsonrpc: '2.0',
-              method: name,
-              params: wasParams(params),
-              id
-            })
-          )
-        ).catch(handleError)
+        // This is a subscription request:
+        if (
+          allowMultipleReturns &&
+          localCleaners[methodName] != null &&
+          localCleaners[methodName].asResult == null
+        ) {
+          // Keep track of the remote method name to send notifications
+          remoteSubscriptions.set(id, methodName)
+        }
+
+        const request = wasCall({
+          jsonrpc: '2.0',
+          method: methodName,
+          params: wasParams(params),
+          id
+        })
+        handleSend(JSON.stringify(request)).catch(handleError)
+
         return out
       }
     }
@@ -208,25 +254,24 @@ function makeCodec(
     }
 
     // TODO: We need to add support for batch calls.
-    const call = asMaybe(asJsonRpcCall)(json)
-    const response = asMaybe(asJsonRpcReturn)(json)
+    const call = asMaybe(asCall)(json)
+    const response = asMaybe(asReturn)(json)
 
     if (call != null) {
-      const { method, id, params } = call
-      const cleaners = localCleaners[method]
+      const cleaners = localCleaners[call.method]
       if (cleaners == null) {
-        sendError(-32601, `Method not found: ${method}`).catch(handleError)
+        sendError(-32601, `Method not found: ${call.method}`).catch(handleError)
         return
       }
 
-      if (cleaners.asResult != null && id == null) {
+      if (cleaners.asResult != null && call.id == null) {
         sendError(-32600, `Invalid JSON-RPC request: missing id`).catch(
           handleError
         )
         return
       }
 
-      if (cleaners.asResult == null && id != null) {
+      if (cleaners.asResult == null && call.id != null) {
         sendError(
           -32600,
           `Invalid JSON-RPC request: notification has an id`
@@ -236,7 +281,7 @@ function makeCodec(
 
       let cleanParams: unknown
       try {
-        cleanParams = cleaners.asParams(params)
+        cleanParams = cleaners.asParams(call.params)
       } catch (error) {
         sendError(-32602, `Invalid params: ${errorMessage(error)}`).catch(
           handleError
@@ -244,24 +289,21 @@ function makeCodec(
         return
       }
 
-      const out = localMethods[method](cleanParams)
+      const out = localMethods[call.method](cleanParams)
       if (cleaners.asResult != null && out?.then != null) {
         const wasResult = uncleaner(cleaners.asResult)
         out.then(
           (result: unknown) => {
-            handleSend(
-              JSON.stringify(
-                wasJsonRpcReturn({
-                  jsonrpc: '2.0',
-                  result: wasResult(result),
-                  error: undefined,
-                  id: id ?? null
-                })
-              )
-            ).catch(handleError)
+            const response = wasReturn({
+              jsonrpc: '2.0',
+              result: wasResult(result),
+              error: undefined,
+              id: call.id ?? null
+            })
+            handleSend(JSON.stringify(response)).catch(handleError)
           },
           (error: unknown) => {
-            sendError(1, errorMessage(error), id).catch(handleError)
+            sendError(1, errorMessage(error), call.id).catch(handleError)
           }
         )
       }
@@ -273,8 +315,27 @@ function makeCodec(
         return
       }
       const pendingCall = remoteCalls.get(id)
+
+      // Handle subscription calls masquerading as returns:
       if (pendingCall == null) {
-        sendError(-32603, `Cannot find id ${String(id)}`, id).catch(handleError)
+        const methodName = remoteSubscriptions.get(id)
+        if (methodName == null) {
+          sendError(-32603, `Cannot find id ${String(id)}`, id).catch(
+            handleError
+          )
+          return
+        }
+
+        let cleanParams: unknown
+        try {
+          cleanParams = localCleaners[methodName].asParams(result)
+        } catch (error) {
+          sendError(-32602, `Invalid params: ${errorMessage(error)}`).catch(
+            handleError
+          )
+          return
+        }
+        localMethods[methodName](cleanParams)
         return
       }
       remoteCalls.delete(id)
@@ -344,15 +405,14 @@ const asRpcId = (raw: unknown): RpcId => {
   throw new TypeError('Expected a string or an integer')
 }
 
-const asJsonRpcCall = asObject<JsonRpcCall>({
+export const asJsonRpcCall = asObject<JsonRpcCall>({
   jsonrpc: asValue('2.0'),
   method: asString,
   params: asUnknown,
   id: asOptional(asRpcId)
 })
-const wasJsonRpcCall = uncleaner(asJsonRpcCall)
 
-const asJsonRpcReturn = asObject<JsonRpcReturn>({
+export const asJsonRpcReturn = asObject<JsonRpcReturn>({
   jsonrpc: asValue('2.0'),
   result: asUnknown,
   error: asOptional(
@@ -364,4 +424,3 @@ const asJsonRpcReturn = asObject<JsonRpcReturn>({
   ),
   id: asRpcId
 })
-const wasJsonRpcReturn = uncleaner(asJsonRpcReturn)
