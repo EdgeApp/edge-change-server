@@ -1,6 +1,7 @@
 import { serverConfig } from '../serverConfig'
 import { AddressPlugin } from '../types/addressPlugin'
 import { BlockbookOptions, makeBlockbook } from './blockbook'
+import { makeEvmRpc } from './evmRpc'
 import { makeFakePlugin } from './fakePlugin'
 
 function makeNowNode(opts: BlockbookOptions): AddressPlugin {
@@ -35,25 +36,93 @@ export const allPlugins = [
   }),
 
   // Ethereum family:
-  makeNowNode({
+  makeEvmRpc({
+    pluginId: 'abstract',
+    url: 'https://api.mainnet.abs.xyz'
+  }),
+  makeEvmRpc({
+    pluginId: 'amoy',
+    url: 'https://polygon-amoy-bor-rpc.publicnode.com'
+  }),
+  makeEvmRpc({
     pluginId: 'arbitrum',
-    url: 'wss://arb-blockbook.nownodes.io/wss'
+    url: 'https://arbitrum-one-rpc.publicnode.com'
   }),
-  makeNowNode({
+  makeEvmRpc({
     pluginId: 'avalanche',
-    url: 'wss://avax-blockbook.nownodes.io/wss'
+    url: 'https://avalanche-c-chain-rpc.publicnode.com'
   }),
-  makeNowNode({
+  makeEvmRpc({
     pluginId: 'base',
-    url: 'wss://base-blockbook.nownodes.io/wss'
+    url: 'https://base-rpc.publicnode.com'
   }),
-  makeNowNode({
+  makeEvmRpc({
+    pluginId: 'binancesmartchain',
+    url: 'https://bsc-rpc.publicnode.com'
+  }),
+  makeEvmRpc({
+    pluginId: 'bobevm',
+    url: 'https://bob.drpc.org'
+  }),
+  makeEvmRpc({
+    pluginId: 'celo',
+    url: 'https://celo-rpc.publicnode.com'
+  }),
+  makeEvmRpc({
     pluginId: 'ethereum',
-    url: 'wss://eth-blockbook.nownodes.io/wss'
+    url: 'https://ethereum-rpc.publicnode.com'
   }),
-  makeNowNode({
+  makeEvmRpc({
+    pluginId: 'ethereumclassic',
+    url: 'https://geth-at.etc-network.info'
+  }),
+  makeEvmRpc({
+    pluginId: 'ethereumpow',
+    url: 'https://mainnet.ethereumpow.org'
+  }),
+  makeEvmRpc({
+    pluginId: 'fantom',
+    url: 'https://rpc.fantom.network'
+  }),
+  makeEvmRpc({
+    pluginId: 'filecoinfevm',
+    url: 'https://rpc.ankr.com/filecoin'
+  }),
+  makeEvmRpc({
+    pluginId: 'filecoinfevmcalibration',
+    url: 'https://rpc.ankr.com/filecoin_testnet'
+  }),
+  makeEvmRpc({
+    pluginId: 'holesky',
+    url: 'https://ethereum-holesky-rpc.publicnode.com'
+  }),
+  makeEvmRpc({
+    pluginId: 'optimism',
+    url: 'https://optimism-rpc.publicnode.com'
+  }),
+  makeEvmRpc({
     pluginId: 'polygon',
-    url: 'wss://maticbook.nownodes.io/wss'
+    url: 'https://polygon-bor-rpc.publicnode.com'
+  }),
+  makeEvmRpc({
+    pluginId: 'pulsechain',
+    url: 'https://pulsechain-rpc.publicnode.com'
+  }),
+  makeEvmRpc({
+    pluginId: 'rsk',
+    url: 'https://public-node.rsk.co'
+  }),
+  makeEvmRpc({
+    pluginId: 'sepolia',
+    url: 'https://ethereum-sepolia-rpc.publicnode.com'
+  }),
+  makeEvmRpc({
+    pluginId: 'sonic',
+    url: 'https://sonic.drpc.org'
+  }),
+  makeEvmRpc({
+    pluginId: 'zksync',
+    url: 'https://1rpc.io/zksync2-era'
   }),
 
   // Testing:
