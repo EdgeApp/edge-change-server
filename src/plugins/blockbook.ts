@@ -3,13 +3,13 @@ import { Counter } from 'prom-client'
 import WebSocket from 'ws'
 import { makeEvents } from 'yavent'
 
-import { snooze } from '../../test/util/snooze'
 import { messageToString } from '../messageToString'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import {
   blockbookProtocol,
   BlockbookProtocolServer
 } from '../types/blockbookProtocol'
+import { snooze } from '../util/snooze'
 
 const MAX_ADDRESS_COUNT_PER_CONNECTION = 100
 
