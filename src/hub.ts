@@ -189,7 +189,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
                   if (!success) return 0 // Failed for whatever reason
 
                   // If the plugin can't scan, let the client do it:
-                  if (pluginRow.plugin.scanAddress == null) return 0
+                  if (pluginRow.plugin.scanAddress == null) return 2
 
                   const changed = await pluginRow.plugin
                     .scanAddress(address, checkpoint)
