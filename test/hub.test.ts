@@ -133,7 +133,7 @@ describe('AddressHub', function () {
     const result = await changeClient.remoteMethods.subscribe([
       [UNSCANNABLE_PLUGIN_ID, TEST_ADDRESS]
     ])
-    expect(result).toEqual([0])
+    expect(result).toEqual([2])
   })
   test('subscribe unscannable plugin with checkpoint', async function () {
     await waitForExpect(() => {
@@ -142,7 +142,7 @@ describe('AddressHub', function () {
     const result = await changeClient.remoteMethods.subscribe([
       [UNSCANNABLE_PLUGIN_ID, TEST_ADDRESS, HIGH_CHECKPOINT]
     ])
-    expect(result).toEqual([0])
+    expect(result).toEqual([2])
   })
 
   test('subscription life-cycle', async function () {
