@@ -39,8 +39,7 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'abstract',
     url: 'https://api.mainnet.abs.xyz',
-    evmScanUrls: ['https://api.abscan.org'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.abstract
+    evmScanUrls: ['https://api.abscan.org']
   }),
   makeEvmRpc({
     pluginId: 'amoy',
@@ -49,8 +48,7 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'arbitrum',
     url: 'https://arbitrum-one-rpc.publicnode.com',
-    evmScanUrls: ['https://api.abscan.org'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.arbitrum
+    evmScanUrls: ['https://api.etherscan.io', 'https://api.arbiscan.io']
   }),
   makeEvmRpc({
     pluginId: 'avalanche',
@@ -58,56 +56,46 @@ export const allPlugins = [
     evmScanUrls: [
       'https://api.avascan.info/v2/network/mainnet/evm/43114/etherscan',
       'https://api.snowscan.xyz'
-    ],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.avalanche
+    ]
   }),
   makeEvmRpc({
     pluginId: 'base',
     url: 'https://base-rpc.publicnode.com',
-    evmScanUrls: ['https://api.basescan.org'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.base
+    evmScanUrls: ['https://api.basescan.org']
   }),
   makeEvmRpc({
     pluginId: 'binancesmartchain',
     url: 'https://bsc-rpc.publicnode.com',
-    evmScanUrls: ['https://api.bscscan.com'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.binancesmartchain
+    evmScanUrls: ['https://api.bscscan.com']
   }),
   makeEvmRpc({
     pluginId: 'bobevm',
     url: 'https://bob.drpc.org',
-    evmScanUrls: ['https://explorer.gobob.xyz'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.bobevm
+    evmScanUrls: ['https://explorer.gobob.xyz']
   }),
   makeEvmRpc({
     pluginId: 'celo',
     url: 'https://celo-rpc.publicnode.com',
-    evmScanUrls: ['https://explorer.celo.org/mainnet'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.celo
+    evmScanUrls: ['https://explorer.celo.org/mainnet']
   }),
   makeEvmRpc({
     pluginId: 'ethereum',
     url: 'https://ethereum-rpc.publicnode.com',
-    evmScanUrls: ['https://api.etherscan.io', 'https://eth.blockscout.com/'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.ethereum
+    evmScanUrls: ['https://api.etherscan.io', 'https://eth.blockscout.com/']
   }),
   makeEvmRpc({
     pluginId: 'ethereumclassic',
     url: 'https://geth-at.etc-network.info',
-    evmScanUrls: ['https://etc.blockscout.com'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.ethereumclassic
+    evmScanUrls: ['https://etc.blockscout.com']
   }),
   makeEvmRpc({
     pluginId: 'ethereumpow',
-    url: 'https://mainnet.ethereumpow.org',
-    evmScanUrls: ['https://etc.blockscout.com/'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.ethereumpow
+    url: 'https://mainnet.ethereumpow.org'
   }),
   makeEvmRpc({
     pluginId: 'fantom',
     url: 'https://rpc.fantom.network',
-    evmScanUrls: ['https://ftmscout.com/'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.fantom
+    evmScanUrls: ['https://ftmscout.com/']
   }),
   makeEvmRpc({
     pluginId: 'filecoinfevm',
@@ -120,44 +108,37 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'holesky',
     url: 'https://ethereum-holesky-rpc.publicnode.com',
-    evmScanUrls: ['https://api-holesky.etherscan.io'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.holesky
+    evmScanUrls: ['https://api-holesky.etherscan.io']
   }),
   makeEvmRpc({
     pluginId: 'optimism',
     url: 'https://optimism-rpc.publicnode.com',
-    evmScanUrls: ['https://api-optimistic.etherscan.io'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.optimism
+    evmScanUrls: ['https://api-optimistic.etherscan.io']
   }),
   makeEvmRpc({
     pluginId: 'polygon',
     url: 'https://polygon-bor-rpc.publicnode.com',
-    evmScanUrls: ['https://api.polygonscan.com'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.polygon
+    evmScanUrls: ['https://api.polygonscan.com']
   }),
   makeEvmRpc({
     pluginId: 'pulsechain',
     url: 'https://pulsechain-rpc.publicnode.com',
-    evmScanUrls: ['https://api.scan.pulsechain.com'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.pulsechain
+    evmScanUrls: ['https://api.scan.pulsechain.com']
   }),
   makeEvmRpc({
     pluginId: 'rsk',
     url: 'https://public-node.rsk.co',
-    evmScanUrls: ['https://rootstock.blockscout.com/'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.rsk
+    evmScanUrls: ['https://rootstock.blockscout.com/']
   }),
   makeEvmRpc({
     pluginId: 'sepolia',
     url: 'https://ethereum-sepolia-rpc.publicnode.com',
-    evmScanUrls: ['https://api-sepolia.etherscan.io'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.sepolia
+    evmScanUrls: ['https://api-sepolia.etherscan.io']
   }),
   makeEvmRpc({
     pluginId: 'sonic',
     url: 'https://sonic.drpc.org',
-    evmScanUrls: ['https://api.sonicscan.org'],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.sonic
+    evmScanUrls: ['https://api.sonicscan.org']
   }),
   makeEvmRpc({
     pluginId: 'zksync',
@@ -166,8 +147,7 @@ export const allPlugins = [
       'https://block-explorer-api.mainnet.zksync.io',
       'https://api-era.zksync.network',
       'https://zksync.blockscout.com/api'
-    ],
-    evmScanApiKeys: serverConfig.evmScanApiKeys.zksync
+    ]
   }),
 
   // Testing:

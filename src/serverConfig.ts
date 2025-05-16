@@ -18,10 +18,13 @@ const asServerConfig = asObject({
   publicUri: asOptional(asString, 'https://address1.edge.app'),
 
   // Resources:
-  evmScanApiKeys: asOptional(asObject(asArray(asString)), () => ({
-    '<pluginId>': ['<api-key>']
-  })),
-  nowNodesApiKey: asOptional(asString, '')
+  nowNodesApiKey: asOptional(asString, ''),
+  serviceKeys: asOptional(
+    asObject<string[] | undefined>(asArray(asString)),
+    () => ({
+      '<service-host>': ['<api-key>']
+    })
+  )
 })
 
 export const serverConfig = makeConfig(

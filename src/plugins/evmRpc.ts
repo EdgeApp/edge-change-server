@@ -2,6 +2,7 @@ import { createPublicClient, http, parseAbiItem } from 'viem'
 import { mainnet } from 'viem/chains'
 import { makeEvents } from 'yavent'
 
+import { serverConfig } from '../serverConfig'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { pickRandom } from '../util/pickRandom'
 
@@ -15,8 +16,6 @@ export interface EvmRpcOptions {
 
   /** The Etherscan-like API URL for `scanAddress` capabilities. */
   evmScanUrls?: string[]
-  /** The Etherscan-like API key for `scanAddress` capabilities. */
-  evmScanApiKeys?: string[]
 }
 
 const ERC20_TRANSFER_EVENT = parseAbiItem(
@@ -24,13 +23,7 @@ const ERC20_TRANSFER_EVENT = parseAbiItem(
 )
 
 export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
-  const {
-    pluginId,
-    safeUrl = opts.url,
-    url,
-    evmScanUrls,
-    evmScanApiKeys = []
-  } = opts
+  const { pluginId, safeUrl = opts.url, url, evmScanUrls } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
 
@@ -158,8 +151,13 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       })
       // Use a random API URL:
       const evmScanUrl = pickRandom(evmScanUrls)
+      const host = new URL(evmScanUrl).host
+      const apiKeys = serverConfig.serviceKeys[host]
+      if (apiKeys == null) {
+        logger.warn('No API key found for', host)
+      }
       // Use a random API key:
-      const apiKey = pickRandom(evmScanApiKeys)
+      const apiKey = apiKeys == null ? undefined : pickRandom(apiKeys)
       if (apiKey != null) {
         params.set('apikey', apiKey)
       }
