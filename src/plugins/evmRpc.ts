@@ -2,16 +2,26 @@ import { createPublicClient, http, parseAbiItem } from 'viem'
 import { mainnet } from 'viem/chains'
 import { makeEvents } from 'yavent'
 
+import { Logger } from '../types'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
+import { pickRandom } from '../util/pickRandom'
+import { makeEtherscanV1ScanAdapter } from '../util/scanAdapters/EtherscanV1ScanAdapter'
+import { makeEtherscanV2ScanAdapter } from '../util/scanAdapters/EtherscanV2ScanAdapter'
+import {
+  ScanAdapter,
+  ScanAdapterConfig
+} from '../util/scanAdapters/scanAdapterTypes'
 
 export interface EvmRpcOptions {
   pluginId: string
 
   /** A clean URL for logging */
   safeUrl?: string
-
   /** The actual wss connection URL */
   url: string
+
+  /** The scan adapters to use for this plugin. */
+  scanAdapters?: ScanAdapterConfig[]
 }
 
 const ERC20_TRANSFER_EVENT = parseAbiItem(
@@ -19,12 +29,12 @@ const ERC20_TRANSFER_EVENT = parseAbiItem(
 )
 
 export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
-  const { pluginId, safeUrl = opts.url, url } = opts
+  const { pluginId, safeUrl = opts.url, url, scanAdapters } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
 
   const logPrefix = `${pluginId} (${safeUrl}):`
-  const logger = {
+  const logger: Logger = {
     log: (...args: unknown[]): void => {
       console.log(logPrefix, ...args)
     },
@@ -122,8 +132,30 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       const normalizedAddress = address.toLowerCase()
       return subscribedAddresses.delete(normalizedAddress)
     },
-    on
+    on,
+    scanAddress: async (address, checkpoint): Promise<boolean> => {
+      // if no adapters are provided, then we have no way to implement
+      // scanAddress.
+      if (scanAdapters == null || scanAdapters.length === 0) {
+        return true
+      }
+      const scanAdapter = pickRandom(scanAdapters)
+      const adapter = getScanAdapter(scanAdapter, logger)
+      return await adapter(address, checkpoint)
+    }
   }
 
   return plugin
+}
+
+function getScanAdapter(
+  scanAdapterConfig: ScanAdapterConfig,
+  logger: Logger
+): ScanAdapter {
+  switch (scanAdapterConfig.type) {
+    case 'etherscan-v1':
+      return makeEtherscanV1ScanAdapter(scanAdapterConfig, logger)
+    case 'etherscan-v2':
+      return makeEtherscanV2ScanAdapter(scanAdapterConfig, logger)
+  }
 }
