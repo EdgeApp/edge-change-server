@@ -6,6 +6,7 @@ import { Logger } from '../types'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { pickRandom } from '../util/pickRandom'
 import { makeEtherscanV1ScanAdapter } from '../util/scanAdapters/EtherscanV1ScanAdapter'
+import { makeEtherscanV2ScanAdapter } from '../util/scanAdapters/EtherscanV2ScanAdapter'
 import {
   ScanAdapter,
   ScanAdapterConfig
@@ -154,5 +155,7 @@ function getScanAdapter(
   switch (scanAdapterConfig.type) {
     case 'etherscan-v1':
       return makeEtherscanV1ScanAdapter(scanAdapterConfig, logger)
+    case 'etherscan-v2':
+      return makeEtherscanV2ScanAdapter(scanAdapterConfig, logger)
   }
 }
