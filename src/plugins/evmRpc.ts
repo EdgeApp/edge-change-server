@@ -3,15 +3,20 @@ import { mainnet } from 'viem/chains'
 import { makeEvents } from 'yavent'
 
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
+import { pickRandom } from '../util/pickRandom'
 
 export interface EvmRpcOptions {
   pluginId: string
 
   /** A clean URL for logging */
   safeUrl?: string
-
   /** The actual wss connection URL */
   url: string
+
+  /** The Etherscan-like API URL for `scanAddress` capabilities. */
+  evmScanUrls?: string[]
+  /** The Etherscan-like API key for `scanAddress` capabilities. */
+  evmScanApiKeys?: string[]
 }
 
 const ERC20_TRANSFER_EVENT = parseAbiItem(
@@ -19,7 +24,13 @@ const ERC20_TRANSFER_EVENT = parseAbiItem(
 )
 
 export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
-  const { pluginId, safeUrl = opts.url, url } = opts
+  const {
+    pluginId,
+    safeUrl = opts.url,
+    url,
+    evmScanUrls,
+    evmScanApiKeys = []
+  } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
 
@@ -122,7 +133,51 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       const normalizedAddress = address.toLowerCase()
       return subscribedAddresses.delete(normalizedAddress)
     },
-    on
+    on,
+    scanAddress: async (address, checkpoint): Promise<boolean> => {
+      // If no API key is provided, then we have no way to implement scanAddress
+      // so assume address has changed:
+      if (evmScanUrls == null || evmScanUrls.length === 0) {
+        return true
+      }
+      // Always assume address has changed if checkpoint is not provided:
+      if (checkpoint == null) {
+        return true
+      }
+
+      // Make sure address is normalized (lowercase):
+      const normalizedAddress = address.toLowerCase()
+
+      const params = new URLSearchParams({
+        module: 'account',
+        action: 'txlist',
+        address: normalizedAddress,
+        startblock: checkpoint,
+        endblock: '999999999',
+        sort: 'asc'
+      })
+      // Use a random API URL:
+      const evmScanUrl = pickRandom(evmScanUrls)
+      // Use a random API key:
+      const apiKey = pickRandom(evmScanApiKeys)
+      if (apiKey != null) {
+        params.set('apikey', apiKey)
+      }
+      const response = await fetch(`${evmScanUrl}/api?${params.toString()}`)
+      if (response.status !== 200) {
+        logger.error('scanAddress error', response.status, response.statusText)
+        return true
+      }
+      const data = await response.json()
+
+      // console.log(data)
+
+      if (data.status === '1' && data.result.length > 0) {
+        return true
+      }
+
+      return false
+    }
   }
 
   return plugin
