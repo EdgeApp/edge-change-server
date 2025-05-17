@@ -2,9 +2,14 @@ import { createPublicClient, http, parseAbiItem } from 'viem'
 import { mainnet } from 'viem/chains'
 import { makeEvents } from 'yavent'
 
-import { serverConfig } from '../serverConfig'
+import { Logger } from '../types'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { pickRandom } from '../util/pickRandom'
+import { makeEtherscanV1ScanAdapter } from '../util/scanAdapters/EtherscanV1ScanAdapter'
+import {
+  ScanAdapter,
+  ScanAdapterConfig
+} from '../util/scanAdapters/scanAdapterTypes'
 
 export interface EvmRpcOptions {
   pluginId: string
@@ -14,8 +19,8 @@ export interface EvmRpcOptions {
   /** The actual wss connection URL */
   url: string
 
-  /** The Etherscan-like API URL for `scanAddress` capabilities. */
-  evmScanUrls?: string[]
+  /** The scan adapters to use for this plugin. */
+  scanAdapters?: ScanAdapterConfig[]
 }
 
 const ERC20_TRANSFER_EVENT = parseAbiItem(
@@ -23,12 +28,12 @@ const ERC20_TRANSFER_EVENT = parseAbiItem(
 )
 
 export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
-  const { pluginId, safeUrl = opts.url, url, evmScanUrls } = opts
+  const { pluginId, safeUrl = opts.url, url, scanAdapters } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
 
   const logPrefix = `${pluginId} (${safeUrl}):`
-  const logger = {
+  const logger: Logger = {
     log: (...args: unknown[]): void => {
       console.log(logPrefix, ...args)
     },
@@ -128,55 +133,26 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
     },
     on,
     scanAddress: async (address, checkpoint): Promise<boolean> => {
-      // If no API key is provided, then we have no way to implement scanAddress
-      // so assume address has changed:
-      if (evmScanUrls == null || evmScanUrls.length === 0) {
+      // if no adapters are provided, then we have no way to implement
+      // scanAddress.
+      if (scanAdapters == null || scanAdapters.length === 0) {
         return true
       }
-      // Always assume address has changed if checkpoint is not provided:
-      if (checkpoint == null) {
-        return true
-      }
-
-      // Make sure address is normalized (lowercase):
-      const normalizedAddress = address.toLowerCase()
-
-      const params = new URLSearchParams({
-        module: 'account',
-        action: 'txlist',
-        address: normalizedAddress,
-        startblock: checkpoint,
-        endblock: '999999999',
-        sort: 'asc'
-      })
-      // Use a random API URL:
-      const evmScanUrl = pickRandom(evmScanUrls)
-      const host = new URL(evmScanUrl).host
-      const apiKeys = serverConfig.serviceKeys[host]
-      if (apiKeys == null) {
-        logger.warn('No API key found for', host)
-      }
-      // Use a random API key:
-      const apiKey = apiKeys == null ? undefined : pickRandom(apiKeys)
-      if (apiKey != null) {
-        params.set('apikey', apiKey)
-      }
-      const response = await fetch(`${evmScanUrl}/api?${params.toString()}`)
-      if (response.status !== 200) {
-        logger.error('scanAddress error', response.status, response.statusText)
-        return true
-      }
-      const data = await response.json()
-
-      // console.log(data)
-
-      if (data.status === '1' && data.result.length > 0) {
-        return true
-      }
-
-      return false
+      const scanAdapter = pickRandom(scanAdapters)
+      const adapter = getScanAdapter(scanAdapter, logger)
+      return await adapter(address, checkpoint)
     }
   }
 
   return plugin
+}
+
+function getScanAdapter(
+  scanAdapterConfig: ScanAdapterConfig,
+  logger: Logger
+): ScanAdapter {
+  switch (scanAdapterConfig.type) {
+    case 'etherscan-v1':
+      return makeEtherscanV1ScanAdapter(scanAdapterConfig, logger)
+  }
 }

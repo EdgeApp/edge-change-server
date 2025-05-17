@@ -81,7 +81,12 @@ describe('evmRpc plugin', function () {
     plugin = makeEvmRpc({
       pluginId: 'test-evm',
       url: mockUrl,
-      evmScanUrls: ['https://eth.blockscout.com/']
+      scanAdapters: [
+        {
+          type: 'etherscan-v1',
+          urls: ['https://eth.blockscout.com/']
+        }
+      ]
     })
   })
 

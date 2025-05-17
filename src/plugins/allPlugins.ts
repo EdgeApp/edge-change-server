@@ -39,7 +39,7 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'abstract',
     url: 'https://api.mainnet.abs.xyz',
-    evmScanUrls: ['https://api.abscan.org']
+    scanAdapters: [{ type: 'etherscan-v1', urls: ['https://api.abscan.org'] }]
   }),
   makeEvmRpc({
     pluginId: 'amoy',
@@ -48,45 +48,66 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'arbitrum',
     url: 'https://arbitrum-one-rpc.publicnode.com',
-    evmScanUrls: ['https://api.etherscan.io', 'https://api.arbiscan.io']
+    scanAdapters: [
+      {
+        type: 'etherscan-v1',
+        urls: ['https://api.etherscan.io', 'https://api.arbiscan.io']
+      }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'avalanche',
     url: 'https://avalanche-c-chain-rpc.publicnode.com',
-    evmScanUrls: [
-      'https://api.avascan.info/v2/network/mainnet/evm/43114/etherscan',
-      'https://api.snowscan.xyz'
+    scanAdapters: [
+      {
+        type: 'etherscan-v1',
+        urls: [
+          'https://api.avascan.info/v2/network/mainnet/evm/43114/etherscan',
+          'https://api.snowscan.xyz'
+        ]
+      }
     ]
   }),
   makeEvmRpc({
     pluginId: 'base',
     url: 'https://base-rpc.publicnode.com',
-    evmScanUrls: ['https://api.basescan.org']
+    scanAdapters: [{ type: 'etherscan-v1', urls: ['https://api.basescan.org'] }]
   }),
   makeEvmRpc({
     pluginId: 'binancesmartchain',
     url: 'https://bsc-rpc.publicnode.com',
-    evmScanUrls: ['https://api.bscscan.com']
+    scanAdapters: [{ type: 'etherscan-v1', urls: ['https://api.bscscan.com'] }]
   }),
   makeEvmRpc({
     pluginId: 'bobevm',
     url: 'https://bob.drpc.org',
-    evmScanUrls: ['https://explorer.gobob.xyz']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://explorer.gobob.xyz'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'celo',
     url: 'https://celo-rpc.publicnode.com',
-    evmScanUrls: ['https://explorer.celo.org/mainnet']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://explorer.celo.org/mainnet'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'ethereum',
     url: 'https://ethereum-rpc.publicnode.com',
-    evmScanUrls: ['https://api.etherscan.io', 'https://eth.blockscout.com/']
+    scanAdapters: [
+      {
+        type: 'etherscan-v1',
+        urls: ['https://api.etherscan.io', 'https://eth.blockscout.com/']
+      }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'ethereumclassic',
     url: 'https://geth-at.etc-network.info',
-    evmScanUrls: ['https://etc.blockscout.com']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://etc.blockscout.com'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'ethereumpow',
@@ -95,7 +116,7 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'fantom',
     url: 'https://rpc.fantom.network',
-    evmScanUrls: ['https://ftmscout.com/']
+    scanAdapters: [{ type: 'etherscan-v1', urls: ['https://ftmscout.com/'] }]
   }),
   makeEvmRpc({
     pluginId: 'filecoinfevm',
@@ -108,45 +129,64 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'holesky',
     url: 'https://ethereum-holesky-rpc.publicnode.com',
-    evmScanUrls: ['https://api-holesky.etherscan.io']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://api-holesky.etherscan.io'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'optimism',
     url: 'https://optimism-rpc.publicnode.com',
-    evmScanUrls: ['https://api-optimistic.etherscan.io']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://api-optimistic.etherscan.io'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'polygon',
     url: 'https://polygon-bor-rpc.publicnode.com',
-    evmScanUrls: ['https://api.polygonscan.com']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://api.polygonscan.com'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'pulsechain',
     url: 'https://pulsechain-rpc.publicnode.com',
-    evmScanUrls: ['https://api.scan.pulsechain.com']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://api.scan.pulsechain.com'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'rsk',
     url: 'https://public-node.rsk.co',
-    evmScanUrls: ['https://rootstock.blockscout.com/']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://rootstock.blockscout.com/'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'sepolia',
     url: 'https://ethereum-sepolia-rpc.publicnode.com',
-    evmScanUrls: ['https://api-sepolia.etherscan.io']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://api-sepolia.etherscan.io'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'sonic',
     url: 'https://sonic.drpc.org',
-    evmScanUrls: ['https://api.sonicscan.org']
+    scanAdapters: [
+      { type: 'etherscan-v1', urls: ['https://api.sonicscan.org'] }
+    ]
   }),
   makeEvmRpc({
     pluginId: 'zksync',
     url: 'https://1rpc.io/zksync2-era',
-    evmScanUrls: [
-      'https://block-explorer-api.mainnet.zksync.io',
-      'https://api-era.zksync.network',
-      'https://zksync.blockscout.com/api'
+    scanAdapters: [
+      {
+        type: 'etherscan-v1',
+        urls: [
+          'https://block-explorer-api.mainnet.zksync.io',
+          'https://api-era.zksync.network',
+          'https://zksync.blockscout.com/api'
+        ]
+      }
     ]
   }),
 
