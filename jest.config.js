@@ -1,5 +1,6 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  forceExit: true
+  forceExit: true,
+  setupFiles: ['./jest.setup.ts']
 }
