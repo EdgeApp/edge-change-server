@@ -60,6 +60,32 @@ export function makeEtherscanV1ScanAdapter(
       return true
     }
 
+    // If no normal transactions, check for token transactions:
+    const tokenParams = new URLSearchParams({
+      module: 'account',
+      action: 'tokentx',
+      address: normalizedAddress,
+      startblock: checkpoint,
+      endblock: '999999999',
+      sort: 'asc'
+    })
+    if (apiKey != null) {
+      tokenParams.set('apikey', apiKey)
+    }
+    const tokenResponse = await fetch(`${url}/api?${tokenParams.toString()}`)
+    if (tokenResponse.status !== 200) {
+      logger.error(
+        'scanAddress tokenTx error',
+        tokenResponse.status,
+        tokenResponse.statusText
+      )
+      return false
+    }
+    const tokenData = await tokenResponse.json()
+    if (tokenData.status === '1' && tokenData.result.length > 0) {
+      return true
+    }
+
     return false
   }
 }

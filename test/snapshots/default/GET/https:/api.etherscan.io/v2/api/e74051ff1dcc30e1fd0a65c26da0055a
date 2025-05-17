@@ -1,0 +1,72 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://api.etherscan.io/v2/api?module=account&action=tokentx&address=0xf5335367a46c2484f13abd051444e39775ea7b60&startblock=1234567890&endblock=999999999&sort=asc&apikey=JYMB141VYKJ2KPVMYJUZC8PXGWKUFVFX8N",
+    "body": "",
+    "headers": [],
+    "cookies": []
+  },
+  "response": {
+    "status": 200,
+    "statusText": "OK",
+    "body": "{\"status\":\"0\",\"message\":\"NOTOK\",\"result\":\"Missing chainid parameter (required for v2 api), please see https://api.etherscan.io/v2/chainlist for the list of supported chainids\"}",
+    "headers": [
+      [
+        "access-control-allow-headers",
+        "Content-Type"
+      ],
+      [
+        "access-control-allow-methods",
+        "GET, POST, OPTIONS"
+      ],
+      [
+        "access-control-allow-origin",
+        "*"
+      ],
+      [
+        "cache-control",
+        "private"
+      ],
+      [
+        "connection",
+        "keep-alive"
+      ],
+      [
+        "content-encoding",
+        "gzip"
+      ],
+      [
+        "content-length",
+        "257"
+      ],
+      [
+        "content-type",
+        "application/json; charset=utf-8"
+      ],
+      [
+        "date",
+        "Sat, 17 May 2025 01:11:04 GMT"
+      ],
+      [
+        "server",
+        "nginx"
+      ],
+      [
+        "svid",
+        "4"
+      ],
+      [
+        "vary",
+        "Accept-Encoding"
+      ],
+      [
+        "x-frame-options",
+        "SAMEORIGIN"
+      ],
+      [
+        "x-nginx-id",
+        "2"
+      ]
+    ]
+  }
+}

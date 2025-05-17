@@ -1,0 +1,88 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://eth.blockscout.com/api?module=account&action=tokentx&address=0xa83b24b53e18d6b86db860f1d3b19a1300ccfbce&startblock=22499359&endblock=999999999&sort=asc",
+    "body": "",
+    "headers": [],
+    "cookies": []
+  },
+  "response": {
+    "status": 200,
+    "statusText": "OK",
+    "body": "{\"message\":\"OK\",\"result\":[{\"value\":\"967\",\"blockHash\":\"0x04ff1d47639203267ad61ff17bb91c6a5fcdc080445b7242554eb8bfe0b03ebd\",\"blockNumber\":\"22499360\",\"confirmations\":\"25\",\"contractAddress\":\"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599\",\"cumulativeGasUsed\":\"3858453\",\"from\":\"0x036639f209f2ebcde65a3f7896d05a4941d20373\",\"gas\":\"110348\",\"gasPrice\":\"2837115348\",\"gasUsed\":\"54375\",\"hash\":\"0x6a3d9907cca3bf99f56da2352a50498d5467cdcc9e9e8e4fbd4e84cde7f411a3\",\"input\":\"0xa9059cbb000000000000000000000000a83b24b53e18d6b86db860f1d3b19a1300ccfbce00000000000000000000000000000000000000000000000000000000000003c7\",\"logIndex\":\"142\",\"nonce\":\"24\",\"timeStamp\":\"1747443755\",\"to\":\"0xa83b24b53e18d6b86db860f1d3b19a1300ccfbce\",\"tokenDecimal\":\"8\",\"tokenName\":\"Wrapped Bitcoin\",\"tokenSymbol\":\"WBTC\",\"transactionIndex\":\"32\"}],\"status\":\"1\"}",
+    "headers": [
+      [
+        "access-control-allow-credentials",
+        "true"
+      ],
+      [
+        "access-control-allow-origin",
+        "*"
+      ],
+      [
+        "access-control-expose-headers",
+        ""
+      ],
+      [
+        "alt-svc",
+        "h3=\":443\"; ma=86400"
+      ],
+      [
+        "cache-control",
+        "max-age=0, private, must-revalidate"
+      ],
+      [
+        "cf-cache-status",
+        "DYNAMIC"
+      ],
+      [
+        "cf-ray",
+        "940f38772e5bf7ad-LAX"
+      ],
+      [
+        "connection",
+        "keep-alive"
+      ],
+      [
+        "content-encoding",
+        "br"
+      ],
+      [
+        "content-type",
+        "application/json; charset=utf-8"
+      ],
+      [
+        "date",
+        "Sat, 17 May 2025 01:07:54 GMT"
+      ],
+      [
+        "nel",
+        "{\"success_fraction\":0,\"report_to\":\"cf-nel\",\"max_age\":604800}"
+      ],
+      [
+        "report-to",
+        "{\"endpoints\":[{\"url\":\"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=MoY5qcim2P6e2VBGZE4MRoDNkOXIS9T5uzK3xoj%2F68Qh01VJGmhSjxneJeIVfbVtnP%2B1O0FKHLDuRNU2QunG9%2FB880dObDs%2FDhxd%2FHzTDMJpkKnAvUOJack86Nwj%2FXvNJ72CEQ%3D%3D\"}],\"group\":\"cf-nel\",\"max_age\":604800}"
+      ],
+      [
+        "server",
+        "cloudflare"
+      ],
+      [
+        "server-timing",
+        "cfL4;desc=\"?proto=TCP&rtt=6383&min_rtt=6351&rtt_var=2446&sent=4&recv=5&lost=0&retrans=0&sent_bytes=2404&recv_bytes=802&delivery_rate=438190&cwnd=78&unsent_bytes=0&cid=4025b29063c35cd8&ts=441&x=0\""
+      ],
+      [
+        "strict-transport-security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "transfer-encoding",
+        "chunked"
+      ],
+      [
+        "x-request-id",
+        "dcb6d154e3d66bb3907a045fd32ca3ba"
+      ]
+    ]
+  }
+}

@@ -62,6 +62,37 @@ export function makeEtherscanV2ScanAdapter(
       return true
     }
 
+    // If no normal transactions, check for token transactions:
+    const tokenParams = new URLSearchParams({
+      chainId: chainId.toString(),
+      module: 'account',
+      action: 'tokentx',
+      address: normalizedAddress,
+      startblock: checkpoint,
+      endblock: '999999999',
+      sort: 'asc'
+    })
+    if (apiKey != null) {
+      tokenParams.set('apikey', apiKey)
+    }
+    const tokenResponse = await fetch(`${url}/v2/api?${tokenParams.toString()}`)
+    if (tokenResponse.status !== 200) {
+      logger.error(
+        'scanAddress tokenTx error',
+        tokenResponse.status,
+        tokenResponse.statusText
+      )
+      return false
+    }
+    const tokenDataRaw = await tokenResponse.json()
+    const tokenData = asObject({
+      status: asString,
+      result: asArray(asUnknown)
+    })(tokenDataRaw)
+    if (tokenData.status === '1' && tokenData.result.length > 0) {
+      return true
+    }
+
     return false
   }
 }
