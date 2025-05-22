@@ -42,7 +42,7 @@ const mockViemLib: any = jest.requireMock('viem')
 const mockClient: any = mockViemLib.createPublicClient()
 
 describe('evmRpc plugin', function () {
-  const TEST_ETH_ADDRESS = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
+  const TEST_ETH_ADDRESS = '0xF5335367A46c2484f13abd051444E39775EA7b60'
   const TEST_ETH_ADDRESS_LOWERCASE = TEST_ETH_ADDRESS.toLowerCase()
   const TEST_SECOND_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F' // DAI
   const TEST_SECOND_ADDRESS_LOWERCASE = TEST_SECOND_ADDRESS.toLowerCase()
@@ -80,7 +80,13 @@ describe('evmRpc plugin', function () {
 
     plugin = makeEvmRpc({
       pluginId: 'test-evm',
-      url: mockUrl
+      url: mockUrl,
+      scanAdapters: [
+        {
+          type: 'etherscan-v1',
+          urls: ['https://eth.blockscout.com/']
+        }
+      ]
     })
   })
 
@@ -334,7 +340,7 @@ describe('evmRpc plugin', function () {
     })
   })
 
-  test('scanAddress should return true', async function () {
+  test('scanAddress without checkpoint should return true', async function () {
     if (plugin.scanAddress == null) {
       return
     }
@@ -344,6 +350,34 @@ describe('evmRpc plugin', function () {
 
     const result = await plugin.scanAddress(TEST_ETH_ADDRESS)
     expect(result).toBe(true)
+  })
+
+  test('scanAddress with old checkpoint should return true', async function () {
+    if (plugin.scanAddress == null) {
+      return
+    }
+
+    // Subscribe first to make sure the address is tracked
+    await plugin.subscribe(TEST_ETH_ADDRESS)
+
+    // Use an old checkpoint to test that the address has updates
+    const checkpoint = '123456'
+    const result = await plugin.scanAddress(TEST_ETH_ADDRESS, checkpoint)
+    expect(result).toBe(true)
+  })
+
+  test('scanAddress with recent checkpoint should return false', async function () {
+    if (plugin.scanAddress == null) {
+      return
+    }
+
+    // Subscribe first to make sure the address is tracked
+    await plugin.subscribe(TEST_ETH_ADDRESS)
+
+    // Use a recent checkpoint to test that the address has no updates
+    const checkpoint = '22491493'
+    const result = await plugin.scanAddress(TEST_ETH_ADDRESS, checkpoint)
+    expect(result).toBe(false)
   })
 
   test('watchBlocks error handler should log errors', async function () {

@@ -1,0 +1,88 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://eth.blockscout.com/api?module=account&action=txlist&address=0xf5335367a46c2484f13abd051444e39775ea7b60&startblock=1234567890&endblock=999999999&sort=asc",
+    "body": "",
+    "headers": [],
+    "cookies": []
+  },
+  "response": {
+    "status": 200,
+    "statusText": "OK",
+    "body": "{\"message\":\"No transactions found\",\"result\":[],\"status\":\"0\"}",
+    "headers": [
+      [
+        "access-control-allow-credentials",
+        "true"
+      ],
+      [
+        "access-control-allow-origin",
+        "*"
+      ],
+      [
+        "access-control-expose-headers",
+        ""
+      ],
+      [
+        "alt-svc",
+        "h3=\":443\"; ma=86400"
+      ],
+      [
+        "cache-control",
+        "max-age=0, private, must-revalidate"
+      ],
+      [
+        "cf-cache-status",
+        "DYNAMIC"
+      ],
+      [
+        "cf-ray",
+        "940f0688dbc12f17-LAX"
+      ],
+      [
+        "connection",
+        "keep-alive"
+      ],
+      [
+        "content-encoding",
+        "br"
+      ],
+      [
+        "content-type",
+        "application/json; charset=utf-8"
+      ],
+      [
+        "date",
+        "Sat, 17 May 2025 00:33:49 GMT"
+      ],
+      [
+        "nel",
+        "{\"success_fraction\":0,\"report_to\":\"cf-nel\",\"max_age\":604800}"
+      ],
+      [
+        "report-to",
+        "{\"endpoints\":[{\"url\":\"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=QejalKDBuIS5rienA3J6Rjzrxf3oaFeMqysAniO1sc%2B%2BopX1imPjEg1IdRu0ZMtZqJXlsQpXuwkF7VJ%2BGqOmEaV8JtzQfgWd6l7DLF309%2FULr8a4lYZhmkA04VFD%2F2XRUfkb2A%3D%3D\"}],\"group\":\"cf-nel\",\"max_age\":604800}"
+      ],
+      [
+        "server",
+        "cloudflare"
+      ],
+      [
+        "server-timing",
+        "cfL4;desc=\"?proto=TCP&rtt=7048&min_rtt=6592&rtt_var=467&sent=31&recv=20&lost=0&retrans=0&sent_bytes=28614&recv_bytes=1130&delivery_rate=1049579&cwnd=255&unsent_bytes=0&cid=769714dfac6bd896&ts=1109&x=0\""
+      ],
+      [
+        "strict-transport-security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "transfer-encoding",
+        "chunked"
+      ],
+      [
+        "x-request-id",
+        "f7ff4beca739c7001a761679ab4704da"
+      ]
+    ]
+  }
+}
