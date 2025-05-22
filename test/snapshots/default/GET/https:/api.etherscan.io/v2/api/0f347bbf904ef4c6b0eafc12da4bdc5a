@@ -1,0 +1,72 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://api.etherscan.io/v2/api?chainId=1&module=account&action=txlist&address=0xa83b24b53e18d6b86db860f1d3b19a1300ccfbce&startblock=22499359&endblock=999999999&sort=asc&apikey=JYMB141VYKJ2KPVMYJUZC8PXGWKUFVFX8N",
+    "body": "",
+    "headers": [],
+    "cookies": []
+  },
+  "response": {
+    "status": 200,
+    "statusText": "OK",
+    "body": "{\"status\":\"0\",\"message\":\"No transactions found\",\"result\":[]}",
+    "headers": [
+      [
+        "access-control-allow-headers",
+        "Content-Type"
+      ],
+      [
+        "access-control-allow-methods",
+        "GET, POST, OPTIONS"
+      ],
+      [
+        "access-control-allow-origin",
+        "*"
+      ],
+      [
+        "cache-control",
+        "private"
+      ],
+      [
+        "connection",
+        "keep-alive"
+      ],
+      [
+        "content-encoding",
+        "gzip"
+      ],
+      [
+        "content-length",
+        "172"
+      ],
+      [
+        "content-type",
+        "application/json; charset=utf-8"
+      ],
+      [
+        "date",
+        "Sat, 17 May 2025 01:10:10 GMT"
+      ],
+      [
+        "server",
+        "nginx"
+      ],
+      [
+        "svid",
+        "4"
+      ],
+      [
+        "vary",
+        "Accept-Encoding"
+      ],
+      [
+        "x-frame-options",
+        "SAMEORIGIN"
+      ],
+      [
+        "x-nginx-id",
+        "2"
+      ]
+    ]
+  }
+}

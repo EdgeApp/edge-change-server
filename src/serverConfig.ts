@@ -1,5 +1,5 @@
 import { makeConfig } from 'cleaner-config'
-import { asNumber, asObject, asOptional, asString } from 'cleaners'
+import { asArray, asNumber, asObject, asOptional, asString } from 'cleaners'
 import { cpus } from 'os'
 
 /**
@@ -18,7 +18,13 @@ const asServerConfig = asObject({
   publicUri: asOptional(asString, 'https://address1.edge.app'),
 
   // Resources:
-  nowNodesApiKey: asOptional(asString, '')
+  nowNodesApiKey: asOptional(asString, ''),
+  serviceKeys: asOptional(
+    asObject<string[] | undefined>(asArray(asString)),
+    () => ({
+      '<service-host>': ['<api-key>']
+    })
+  )
 })
 
 export const serverConfig = makeConfig(

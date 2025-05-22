@@ -1,0 +1,72 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://api.etherscan.io/v2/api?chainId=1&module=account&action=txlist&address=0xf5335367a46c2484f13abd051444e39775ea7b60&startblock=12345&endblock=999999999&sort=asc",
+    "body": "",
+    "headers": [],
+    "cookies": []
+  },
+  "response": {
+    "status": 200,
+    "statusText": "OK",
+    "body": "{\"status\":\"0\",\"message\":\"NOTOK\",\"result\":\"Missing/Invalid API Key\"}",
+    "headers": [
+      [
+        "access-control-allow-headers",
+        "Content-Type"
+      ],
+      [
+        "access-control-allow-methods",
+        "GET, POST, OPTIONS"
+      ],
+      [
+        "access-control-allow-origin",
+        "*"
+      ],
+      [
+        "cache-control",
+        "private"
+      ],
+      [
+        "connection",
+        "keep-alive"
+      ],
+      [
+        "content-encoding",
+        "gzip"
+      ],
+      [
+        "content-length",
+        "181"
+      ],
+      [
+        "content-type",
+        "application/json; charset=utf-8"
+      ],
+      [
+        "date",
+        "Sat, 17 May 2025 00:35:17 GMT"
+      ],
+      [
+        "server",
+        "nginx"
+      ],
+      [
+        "svid",
+        "14"
+      ],
+      [
+        "vary",
+        "Accept-Encoding"
+      ],
+      [
+        "x-frame-options",
+        "SAMEORIGIN"
+      ],
+      [
+        "x-nginx-id",
+        "5"
+      ]
+    ]
+  }
+}
