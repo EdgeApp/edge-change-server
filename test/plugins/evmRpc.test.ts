@@ -1,5 +1,7 @@
 import {
+  afterAll,
   afterEach,
+  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -9,6 +11,7 @@ import {
 
 import { makeEvmRpc } from '../../src/plugins/evmRpc'
 import { AddressPlugin } from '../../src/types/addressPlugin'
+import { mswServer } from '../util/mswServer'
 
 // Mock viem
 jest.mock('viem', () => {
@@ -54,6 +57,13 @@ describe('evmRpc plugin', function () {
 
   let plugin: AddressPlugin
 
+  beforeAll(() => {
+    mswServer.listen()
+  })
+  afterAll(() => {
+    mswServer.close()
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
 
@@ -75,6 +85,7 @@ describe('evmRpc plugin', function () {
   })
 
   afterEach(() => {
+    mswServer.resetHandlers()
     jest.clearAllMocks()
   })
 
