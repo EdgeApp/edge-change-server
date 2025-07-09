@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: Added Botanix EvmRpc plugin.
+- added: Added HyperEVM EvmRpc plugin.
+
 ## 0.2.0 (2025-05-22)
 
 - added: Added support for `scanAddress` API for EvmRpc plugin by using etherscan services.

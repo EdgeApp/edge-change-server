@@ -98,6 +98,16 @@ export const allPlugins = [
     ]
   }),
   makeEvmRpc({
+    pluginId: 'botanix',
+    url: 'https://rpc.botanixlabs.com',
+    scanAdapters: [
+      {
+        type: 'etherscan-v1',
+        urls: ['https://api.routescan.io/v2/network/mainnet/evm/3637/etherscan']
+      }
+    ]
+  }),
+  makeEvmRpc({
     pluginId: 'binancesmartchain',
     url: 'https://bsc-rpc.publicnode.com',
     scanAdapters: [
@@ -176,6 +186,16 @@ export const allPlugins = [
         type: 'etherscan-v2',
         chainId: 11155111,
         urls: ['https://api.etherscan.io']
+      }
+    ]
+  }),
+  makeEvmRpc({
+    pluginId: 'hyperevm',
+    url: 'https://rpc.hyperliquid.xyz/evm',
+    scanAdapters: [
+      {
+        type: 'etherscan-v1',
+        urls: ['https://api.routescan.io/v2/network/mainnet/evm/999/etherscan']
       }
     ]
   }),
