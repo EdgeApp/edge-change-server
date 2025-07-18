@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.2 (2025-07-18)
+
 - changed: Updated RPC URLs for Arbitrum, BOB, and zkSync networks.
 
 ## 0.2.1 (2025-07-18)
