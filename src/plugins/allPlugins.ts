@@ -54,7 +54,7 @@ export const allPlugins = [
   }),
   makeEvmRpc({
     pluginId: 'arbitrum',
-    url: 'https://arbitrum-one-rpc.publicnode.com',
+    url: 'https://arbitrum.drpc.org',
     scanAdapters: [
       {
         type: 'etherscan-v1',
@@ -121,7 +121,7 @@ export const allPlugins = [
   }),
   makeEvmRpc({
     pluginId: 'bobevm',
-    url: 'https://bob.drpc.org',
+    url: 'https://rpc.gobob.xyz',
     scanAdapters: [
       { type: 'etherscan-v1', urls: ['https://explorer.gobob.xyz'] }
     ]
@@ -258,7 +258,7 @@ export const allPlugins = [
   }),
   makeEvmRpc({
     pluginId: 'zksync',
-    url: 'https://1rpc.io/zksync2-era',
+    url: 'https://mainnet.era.zksync.io',
     scanAdapters: [
       {
         type: 'etherscan-v1',

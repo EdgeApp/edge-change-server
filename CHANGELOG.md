@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Updated RPC URLs for Arbitrum, BOB, and zkSync networks.
+
 ## 0.2.1 (2025-07-18)
 
 - added: Added Botanix EvmRpc plugin.
