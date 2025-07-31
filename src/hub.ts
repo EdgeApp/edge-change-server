@@ -9,6 +9,7 @@ import {
   SubscribeParams,
   SubscribeResult
 } from './types/changeProtocol'
+import { stackify } from './util/stackify'
 
 const pluginGauge = new Gauge({
   name: 'change_plugin_count',
@@ -203,7 +204,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
                   const changed = await pluginRow.plugin
                     .scanAddress(address, checkpoint)
                     .catch(error => {
-                      logger.warn('Scan address failed: ' + String(error))
+                      logger.warn('Scan address failed: ' + stackify(error))
                       return true
                     })
                   return changed ? 2 : 1
