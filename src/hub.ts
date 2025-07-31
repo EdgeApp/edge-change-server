@@ -204,6 +204,9 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
                     .scanAddress(address, checkpoint)
                     .catch(error => {
                       logger.warn('Scan address failed: ' + String(error))
+                      logger.warn(
+                        'stack trace: ' + JSON.stringify(String(error.stack))
+                      )
                       return true
                     })
                   return changed ? 2 : 1
