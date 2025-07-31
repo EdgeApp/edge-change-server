@@ -2,6 +2,7 @@ import { Counter, Gauge } from 'prom-client'
 import WebSocket from 'ws'
 
 import { messageToString } from './messageToString'
+import { Logger } from './types'
 import { AddressPlugin } from './types/addressPlugin'
 import {
   changeProtocol,
@@ -38,7 +39,7 @@ export interface AddressHub {
 
 export interface AddressHubOpts {
   plugins: AddressPlugin[]
-  log?: (text: string) => void
+  logger?: Logger
 }
 
 interface PluginRow {
@@ -147,18 +148,26 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
   return {
     handleConnection(ws: WebSocket): void {
       const socketId = nextSocketId++
-      function log(text: string): void {
-        if (opts.log != null) {
-          opts.log(`WebSocket ${process.pid}.${socketId} ` + text)
+
+      const logPrefix = `WebSocket ${process.pid}.${socketId} `
+      const logger: Logger = {
+        log: (...args: unknown[]): void => {
+          opts.logger?.log(logPrefix, ...args)
+        },
+        error: (...args: unknown[]): void => {
+          opts.logger?.error(logPrefix, ...args)
+        },
+        warn: (...args: unknown[]): void => {
+          opts.logger?.warn(logPrefix, ...args)
         }
       }
 
       connectionGauge.inc()
-      log('connected')
+      logger.log('connected')
 
       const codec = changeProtocol.makeServerCodec({
         handleError(error) {
-          log(`send error: ${String(error)}`)
+          logger.error(`send error: ${String(error)}`)
           ws.close(1011, 'Internal error')
         },
 
@@ -170,7 +179,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
           async subscribe(
             params: SubscribeParams[]
           ): Promise<SubscribeResult[]> {
-            log(`subscribing ${params.length}`)
+            logger.log(`subscribing ${params.length}`)
 
             // Do the initial scan:
             const result = await Promise.all(
@@ -194,7 +203,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
                   const changed = await pluginRow.plugin
                     .scanAddress(address, checkpoint)
                     .catch(error => {
-                      log('Scan address failed: ' + String(error))
+                      logger.warn('Scan address failed: ' + String(error))
                       return true
                     })
                   return changed ? 2 : 1
@@ -202,13 +211,13 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
               )
             )
 
-            log(`subscribed ${params.length}`)
+            logger.log(`subscribed ${params.length}`)
 
             return result
           },
 
           async unsubscribe(params: SubscribeParams[]): Promise<undefined> {
-            log(`unsubscribed ${params.length}`)
+            logger.log(`unsubscribed ${params.length}`)
 
             for (const param of params) {
               const [pluginId, address] = param
@@ -234,7 +243,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
       codecMap.set(socketId, codec)
 
       ws.on('close', () => {
-        log(`closed`)
+        logger.log(`closed`)
         connectionGauge.dec()
 
         // Cleanup the server codec:
@@ -262,7 +271,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
       })
 
       ws.on('error', error => {
-        log(`connection error: ${String(error)}`)
+        logger.error(`connection error: ${String(error)}`)
       })
 
       ws.on('message', message => {

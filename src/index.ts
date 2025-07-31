@@ -57,7 +57,7 @@ async function server(): Promise<void> {
   })
   console.log(`WebSocket server listening on port ${listenPort}`)
 
-  const hub = makeAddressHub({ plugins: allPlugins, log: console.log })
+  const hub = makeAddressHub({ plugins: allPlugins, logger: console })
   server.on('connection', ws => hub.handleConnection(ws))
 }
 
