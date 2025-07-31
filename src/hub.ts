@@ -193,8 +193,8 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
 
                   const changed = await pluginRow.plugin
                     .scanAddress(address, checkpoint)
-                    .catch(_ => {
-                      // TODO: log error somewhere
+                    .catch(error => {
+                      log('Scan address failed: ' + String(error))
                       return true
                     })
                   return changed ? 2 : 1
