@@ -87,6 +87,33 @@ export function makeEtherscanV2ScanAdapter(
       return true
     }
 
+    // If no normal transactions, check for internal transactions:
+    const internalParams = new URLSearchParams({
+      chainId: chainId.toString(),
+      module: 'account',
+      action: 'txlistinternal',
+      address: normalizedAddress,
+      startblock: checkpoint,
+      endblock: '999999999',
+      sort: 'asc'
+    })
+    if (apiKey != null) {
+      internalParams.set('apikey', apiKey)
+    }
+    const internalResponse = await fetchEtherscanV2(url, internalParams)
+    if ('error' in internalResponse) {
+      logger.error(
+        'scanAddress internalTx error',
+        internalResponse.httpStatus,
+        internalResponse.httpStatusText
+      )
+      return false
+    }
+    const internalData = asResult(internalResponse.json)
+    if (internalData.status === '1' && internalData.result.length > 0) {
+      return true
+    }
+
     return false
   }
 }
