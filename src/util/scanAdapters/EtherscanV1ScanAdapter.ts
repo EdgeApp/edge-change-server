@@ -50,12 +50,7 @@ export function makeEtherscanV1ScanAdapter(
       return true
     }
     const dataRaw = await response.json()
-
-    const data = asObject({
-      status: asString,
-      result: asArray(asUnknown)
-    })(dataRaw)
-
+    const data = asResult(dataRaw)
     if (data.status === '1' && data.result.length > 0) {
       return true
     }
@@ -81,7 +76,8 @@ export function makeEtherscanV1ScanAdapter(
       )
       return false
     }
-    const tokenData = await tokenResponse.json()
+    const tokenDataRaw = await tokenResponse.json()
+    const tokenData = asResult(tokenDataRaw)
     if (tokenData.status === '1' && tokenData.result.length > 0) {
       return true
     }
@@ -89,3 +85,8 @@ export function makeEtherscanV1ScanAdapter(
     return false
   }
 }
+
+const asResult = asObject({
+  status: asString,
+  result: asArray(asUnknown)
+})
