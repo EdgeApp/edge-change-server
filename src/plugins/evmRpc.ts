@@ -22,6 +22,9 @@ export interface EvmRpcOptions {
 
   /** The scan adapters to use for this plugin. */
   scanAdapters?: ScanAdapterConfig[]
+
+  /** Enable value-carrying internal transfer detection via traces (default `true`) */
+  includeInternal?: boolean
 }
 
 const ERC20_TRANSFER_EVENT = parseAbiItem(
@@ -110,6 +113,72 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
           addressesToUpdate.add(matchingToAddress)
         }
       })
+
+      // Internal native-value transfers via traces
+      if (opts.includeInternal !== false) {
+        const addressesFromTraces = new Set<string>()
+
+        // Prefer parity/erigon trace_block (single RPC per block)
+        let traced = false
+        try {
+          const blockTag = `0x${block.number.toString(16)}`
+          const traces: any[] = await (client as any).request({
+            method: 'trace_block',
+            params: [blockTag]
+          })
+          traced = true
+          for (const t of traces) {
+            const action = t?.action ?? {}
+            const from = (action.from ?? action.address ?? '').toLowerCase()
+            const to = (action.to ?? action.address ?? '').toLowerCase()
+            const matchFrom = subscribedAddresses.get(from)
+            const matchTo = subscribedAddresses.get(to)
+            if (matchFrom != null) addressesFromTraces.add(matchFrom)
+            if (matchTo != null) addressesFromTraces.add(matchTo)
+          }
+        } catch (e) {
+          // fall through to geth debug_traceTransaction
+        }
+
+        if (!traced) {
+          // Fallback: geth debug_traceTransaction with callTracer (heavier)
+          const txHashes = block.transactions.map(tx => tx.hash)
+          const results = await Promise.allSettled(
+            txHashes.map(async hash =>
+              (client as any).request({
+                method: 'debug_traceTransaction',
+                params: [
+                  hash,
+                  {
+                    tracer: 'callTracer',
+                    tracerConfig: { onlyTopCall: false }
+                  }
+                ]
+              })
+            )
+          )
+
+          const walk = (node: any): void => {
+            if (node == null) return
+            const from = (node.from ?? '').toLowerCase()
+            const to = (node.to ?? '').toLowerCase()
+            const matchFrom = subscribedAddresses.get(from)
+            const matchTo = subscribedAddresses.get(to)
+            if (matchFrom != null) addressesFromTraces.add(matchFrom)
+            if (matchTo != null) addressesFromTraces.add(matchTo)
+            for (const c of node.calls ?? []) walk(c)
+          }
+
+          for (const r of results as any[]) {
+            if (r.status !== 'fulfilled') continue
+            walk((r as PromiseFulfilledResult<any>).value)
+          }
+        }
+
+        for (const a of addressesFromTraces) {
+          addressesToUpdate.add(a)
+        }
+      }
 
       // Emit update events for all affected subscribed addresses
       for (const originalAddress of addressesToUpdate) {
