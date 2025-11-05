@@ -46,19 +46,17 @@ export function makeEtherscanV2ScanAdapter(
     if (apiKey != null) {
       params.set('apikey', apiKey)
     }
-    const response = await fetch(`${url}/v2/api?${params.toString()}`)
-    if (response.status !== 200) {
-      logger.error('scanAddress error', response.status, response.statusText)
+    const response = await fetchEtherscanV2(url, params)
+    if ('error' in response) {
+      logger.error(
+        'scanAddress error',
+        response.httpStatus,
+        response.httpStatusText
+      )
       return true
     }
-    const dataRaw = await response.json()
-
-    const data = asObject({
-      status: asString,
-      result: asArray(asUnknown)
-    })(dataRaw)
-
-    if (data.status === '1' && data.result.length > 0) {
+    const transactionData = asResult(response.json)
+    if (transactionData.status === '1' && transactionData.result.length > 0) {
       return true
     }
 
@@ -75,24 +73,79 @@ export function makeEtherscanV2ScanAdapter(
     if (apiKey != null) {
       tokenParams.set('apikey', apiKey)
     }
-    const tokenResponse = await fetch(`${url}/v2/api?${tokenParams.toString()}`)
-    if (tokenResponse.status !== 200) {
+    const tokenResponse = await fetchEtherscanV2(url, tokenParams)
+    if ('error' in tokenResponse) {
       logger.error(
         'scanAddress tokenTx error',
-        tokenResponse.status,
-        tokenResponse.statusText
+        tokenResponse.httpStatus,
+        tokenResponse.httpStatusText
       )
       return false
     }
-    const tokenDataRaw = await tokenResponse.json()
-    const tokenData = asObject({
-      status: asString,
-      result: asArray(asUnknown)
-    })(tokenDataRaw)
+    const tokenData = asResult(tokenResponse.json)
     if (tokenData.status === '1' && tokenData.result.length > 0) {
       return true
     }
 
+    // If no normal transactions, check for internal transactions:
+    const internalParams = new URLSearchParams({
+      chainId: chainId.toString(),
+      module: 'account',
+      action: 'txlistinternal',
+      address: normalizedAddress,
+      startblock: checkpoint,
+      endblock: '999999999',
+      sort: 'asc'
+    })
+    if (apiKey != null) {
+      internalParams.set('apikey', apiKey)
+    }
+    const internalResponse = await fetchEtherscanV2(url, internalParams)
+    if ('error' in internalResponse) {
+      logger.error(
+        'scanAddress internalTx error',
+        internalResponse.httpStatus,
+        internalResponse.httpStatusText
+      )
+      return false
+    }
+    const internalData = asResult(internalResponse.json)
+    if (internalData.status === '1' && internalData.result.length > 0) {
+      return true
+    }
+
     return false
+  }
+}
+
+const asResult = asObject({
+  status: asString,
+  result: asArray(asUnknown)
+})
+
+type EtherscanResult =
+  | {
+      json: unknown
+      httpStatus: number
+    }
+  | { error: boolean; httpStatus: number; httpStatusText: string }
+
+async function fetchEtherscanV2(
+  url: string,
+  params: URLSearchParams
+): Promise<EtherscanResult> {
+  const response = await fetch(`${url}/v2/api?${params.toString()}`)
+  if (response.status !== 200) {
+    return {
+      error: true,
+      httpStatus: response.status,
+      httpStatusText: response.statusText
+    }
+  }
+
+  const json = await response.json()
+  return {
+    json,
+    httpStatus: response.status
   }
 }

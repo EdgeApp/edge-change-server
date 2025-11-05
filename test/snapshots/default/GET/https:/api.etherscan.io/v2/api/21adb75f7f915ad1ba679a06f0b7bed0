@@ -1,0 +1,72 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://api.etherscan.io/v2/api?chainId=1&module=account&action=txlistinternal&address=0x036639f209f2ebcde65a3f7896d05a4941d20373&startblock=999999999&endblock=999999999&sort=asc&apikey=JYMB141VYKJ2KPVMYJUZC8PXGWKUFVFX8N",
+    "body": "",
+    "headers": [],
+    "cookies": []
+  },
+  "response": {
+    "status": 200,
+    "statusText": "OK",
+    "body": "{\"status\":\"0\",\"message\":\"NOTOK\",\"result\":\"Max calls per sec rate limit reached (5/sec)\"}",
+    "headers": [
+      [
+        "access-control-allow-headers",
+        "Content-Type"
+      ],
+      [
+        "access-control-allow-methods",
+        "GET, POST, OPTIONS"
+      ],
+      [
+        "access-control-allow-origin",
+        "*"
+      ],
+      [
+        "cache-control",
+        "private"
+      ],
+      [
+        "connection",
+        "keep-alive"
+      ],
+      [
+        "content-encoding",
+        "gzip"
+      ],
+      [
+        "content-length",
+        "195"
+      ],
+      [
+        "content-type",
+        "application/json; charset=utf-8"
+      ],
+      [
+        "date",
+        "Thu, 23 Oct 2025 23:27:15 GMT"
+      ],
+      [
+        "server",
+        "nginx"
+      ],
+      [
+        "svid",
+        "4"
+      ],
+      [
+        "vary",
+        "Accept-Encoding"
+      ],
+      [
+        "x-frame-options",
+        "SAMEORIGIN"
+      ],
+      [
+        "x-nginx-id",
+        "2"
+      ]
+    ]
+  }
+}

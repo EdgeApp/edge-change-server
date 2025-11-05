@@ -6,6 +6,7 @@ import { mswServer } from '../util/mswServer'
 
 describe('EtherscanV2ScanAdapter', function () {
   const TEST_ETH_ADDRESS = '0xF5335367A46c2484f13abd051444E39775EA7b60'
+  const TEST_ETH_ADDRESS_INTERNAL = '0x036639F209f2Ebcde65a3f7896d05a4941d20373'
 
   const ADDRESS_WITH_TOKEN_TRANSACTION =
     '0xA83b24b53e18D6B86db860F1d3B19A1300CCFbcE'
@@ -64,6 +65,16 @@ describe('EtherscanV2ScanAdapter', function () {
       ADDRESS_WITH_TOKEN_TRANSACTION,
       (TOKEN_TRANSACTION_HEIGHT + 1).toString()
     )
+    expect(result).toBe(false)
+  })
+
+  it('should return true if checkpoint is behind an internal transaction', async function () {
+    const result = await adapter(TEST_ETH_ADDRESS_INTERNAL, '23642875')
+    expect(result).toBe(true)
+  })
+
+  it('should return false if checkpoint is ahead of the latest internal transaction', async function () {
+    const result = await adapter(TEST_ETH_ADDRESS_INTERNAL, '23643125')
     expect(result).toBe(false)
   })
 })
