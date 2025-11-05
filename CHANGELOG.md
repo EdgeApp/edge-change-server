@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.2.3 (2025-11-04)
+
+- fixed: Include detection for internal transactions for both scanAddress and evmRpc.
+
 ## 0.2.2 (2025-07-18)
 
 - changed: Updated RPC URLs for Arbitrum, BOB, and zkSync networks.
