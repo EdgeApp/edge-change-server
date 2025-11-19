@@ -40,7 +40,6 @@ export const allPlugins = [
     pluginId: 'abstract',
     url: 'https://api.mainnet.abs.xyz',
     scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://api.abscan.org'] },
       {
         type: 'etherscan-v2',
         chainId: 2741,
@@ -57,10 +56,6 @@ export const allPlugins = [
     url: 'https://arbitrum.drpc.org',
     scanAdapters: [
       {
-        type: 'etherscan-v1',
-        urls: ['https://api.etherscan.io', 'https://api.arbiscan.io']
-      },
-      {
         type: 'etherscan-v2',
         chainId: 42161,
         urls: ['https://api.etherscan.io']
@@ -72,13 +67,6 @@ export const allPlugins = [
     url: 'https://avalanche-c-chain-rpc.publicnode.com',
     scanAdapters: [
       {
-        type: 'etherscan-v1',
-        urls: [
-          'https://api.avascan.info/v2/network/mainnet/evm/43114/etherscan',
-          'https://api.snowscan.xyz'
-        ]
-      },
-      {
         type: 'etherscan-v2',
         chainId: 43114,
         urls: ['https://api.etherscan.io']
@@ -89,7 +77,6 @@ export const allPlugins = [
     pluginId: 'base',
     url: 'https://base-rpc.publicnode.com',
     scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://api.basescan.org'] },
       {
         type: 'etherscan-v2',
         chainId: 8453,
@@ -98,20 +85,9 @@ export const allPlugins = [
     ]
   }),
   makeEvmRpc({
-    pluginId: 'botanix',
-    url: 'https://rpc.botanixlabs.com',
-    scanAdapters: [
-      {
-        type: 'etherscan-v1',
-        urls: ['https://api.routescan.io/v2/network/mainnet/evm/3637/etherscan']
-      }
-    ]
-  }),
-  makeEvmRpc({
     pluginId: 'binancesmartchain',
     url: 'https://bsc-rpc.publicnode.com',
     scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://api.bscscan.com'] },
       {
         type: 'etherscan-v2',
         chainId: 56,
@@ -124,6 +100,16 @@ export const allPlugins = [
     url: 'https://rpc.gobob.xyz',
     scanAdapters: [
       { type: 'etherscan-v1', urls: ['https://explorer.gobob.xyz'] }
+    ]
+  }),
+  makeEvmRpc({
+    pluginId: 'botanix',
+    url: 'https://rpc.botanixlabs.com',
+    scanAdapters: [
+      {
+        type: 'etherscan-v1',
+        urls: ['https://api.routescan.io/v2/network/mainnet/evm/3637/etherscan']
+      }
     ]
   }),
   makeEvmRpc({
@@ -142,10 +128,6 @@ export const allPlugins = [
     pluginId: 'ethereum',
     url: 'https://ethereum-rpc.publicnode.com',
     scanAdapters: [
-      {
-        type: 'etherscan-v1',
-        urls: ['https://api.etherscan.io', 'https://eth.blockscout.com/']
-      },
       {
         type: 'etherscan-v2',
         chainId: 1,
@@ -181,10 +163,9 @@ export const allPlugins = [
     pluginId: 'holesky',
     url: 'https://ethereum-holesky-rpc.publicnode.com',
     scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://api-holesky.etherscan.io'] },
       {
         type: 'etherscan-v2',
-        chainId: 11155111,
+        chainId: 17000,
         urls: ['https://api.etherscan.io']
       }
     ]
@@ -203,7 +184,6 @@ export const allPlugins = [
     pluginId: 'optimism',
     url: 'https://optimism-rpc.publicnode.com',
     scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://api-optimistic.etherscan.io'] },
       {
         type: 'etherscan-v2',
         chainId: 10,
@@ -215,7 +195,6 @@ export const allPlugins = [
     pluginId: 'polygon',
     url: 'https://polygon-bor-rpc.publicnode.com',
     scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://api.polygonscan.com'] },
       {
         type: 'etherscan-v2',
         chainId: 137,
@@ -241,14 +220,17 @@ export const allPlugins = [
     pluginId: 'sepolia',
     url: 'https://ethereum-sepolia-rpc.publicnode.com',
     scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://api-sepolia.etherscan.io'] }
+      {
+        type: 'etherscan-v2',
+        chainId: 11155111,
+        urls: ['https://api.etherscan.io']
+      }
     ]
   }),
   makeEvmRpc({
     pluginId: 'sonic',
     url: 'https://sonic.drpc.org',
     scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://api.sonicscan.org'] },
       {
         type: 'etherscan-v2',
         chainId: 146,
@@ -264,8 +246,7 @@ export const allPlugins = [
         type: 'etherscan-v1',
         urls: [
           'https://block-explorer-api.mainnet.zksync.io',
-          'https://api-era.zksync.network',
-          'https://zksync.blockscout.com/api'
+          'https://zksync.blockscout.com'
         ]
       },
       {

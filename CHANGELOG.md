@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Removed defunct Etherscan V1 servers.
+
 ## 0.2.3 (2025-11-04)
 
 - fixed: Include detection for internal transactions for both scanAddress and evmRpc.
