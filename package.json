@@ -1,6 +1,6 @@
 {
   "name": "edge-change-server",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "description": "Detects whether addresses have on-chain changes",
   "homepage": "https://github.com/EdgeApp/edge-change-server#readme",
