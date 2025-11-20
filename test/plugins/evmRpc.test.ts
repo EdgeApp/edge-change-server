@@ -24,9 +24,16 @@ jest.mock('viem', () => {
     getLogs: mockGetLogs
   }
 
+  const mockHttp = jest.fn(url => ({ url, type: 'http' }))
+  const mockFallback = jest.fn(transports => ({
+    type: 'fallback',
+    transports
+  }))
+
   return {
     createPublicClient: jest.fn(() => mockClient),
-    http: jest.fn(url => ({ url })),
+    http: mockHttp,
+    fallback: mockFallback,
     parseAbiItem: jest.fn(abiString => ({ abiString }))
   }
 })
@@ -80,7 +87,7 @@ describe('evmRpc plugin', function () {
 
     plugin = makeEvmRpc({
       pluginId: 'test-evm',
-      url: mockUrl,
+      urls: [mockUrl],
       scanAdapters: [
         {
           type: 'etherscan-v1',
@@ -97,9 +104,16 @@ describe('evmRpc plugin', function () {
 
   test('plugin instantiation', function () {
     expect(plugin.pluginId).toBe('test-evm')
+    expect(mockViemLib.http).toHaveBeenCalledWith(mockUrl)
+    expect(mockViemLib.fallback).toHaveBeenCalled()
+    const fallbackCall = mockViemLib.fallback.mock.calls[0][0]
+    expect(fallbackCall).toHaveLength(1)
+    expect(fallbackCall[0]).toMatchObject({ url: mockUrl, type: 'http' })
     expect(mockViemLib.createPublicClient).toHaveBeenCalledWith({
       chain: expect.anything(),
-      transport: expect.anything()
+      transport: expect.objectContaining({
+        type: 'fallback'
+      })
     })
     expect(mockClient.watchBlocks).toHaveBeenCalled()
   })
@@ -388,10 +402,12 @@ describe('evmRpc plugin', function () {
     errorHandler(new Error('Test error'))
 
     // Check that the error was logged
-    expect(consoleSpy.error).toHaveBeenCalledWith(
-      'test-evm (https://ethereum.example.com/rpc):',
-      'watchBlocks error',
-      expect.any(Error)
-    )
+    // The log prefix includes the plugin ID and URL (which is picked randomly from urls array)
+    expect(consoleSpy.error).toHaveBeenCalled()
+    const errorCall = consoleSpy.error.mock.calls[0]
+    expect(errorCall[0]).toContain('test-evm (')
+    expect(errorCall[0]).toContain(mockUrl)
+    expect(errorCall[1]).toBe('watchBlocks error')
+    expect(errorCall[2]).toBeInstanceOf(Error)
   })
 })

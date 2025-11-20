@@ -1,4 +1,4 @@
-import { createPublicClient, http, parseAbiItem } from 'viem'
+import { createPublicClient, fallback, http, parseAbiItem } from 'viem'
 import { mainnet } from 'viem/chains'
 import { makeEvents } from 'yavent'
 
@@ -17,8 +17,8 @@ export interface EvmRpcOptions {
 
   /** A clean URL for logging */
   safeUrl?: string
-  /** The actual wss connection URL */
-  url: string
+  /** The actual RPC connection URLs (will use fallback transport to try all) */
+  urls: string[]
 
   /** The scan adapters to use for this plugin. */
   scanAdapters?: ScanAdapterConfig[]
@@ -32,7 +32,10 @@ const ERC20_TRANSFER_EVENT = parseAbiItem(
 )
 
 export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
-  const { pluginId, safeUrl = opts.url, url, scanAdapters } = opts
+  const { pluginId, urls, scanAdapters } = opts
+
+  // Use random URL for logging if safeUrl not provided
+  const safeUrl = opts.safeUrl ?? pickRandom(urls)
 
   const [on, emit] = makeEvents<PluginEvents>()
 
@@ -52,9 +55,13 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
   // Track subscribed addresses (normalized lowercase address -> original address)
   const subscribedAddresses = new Map<string, string>()
 
+  // Create fallback transport with all URLs
+  const transports = urls.map(url => http(url))
+  const transport = fallback(transports)
+
   const client = createPublicClient({
     chain: mainnet,
-    transport: http(url)
+    transport
   })
 
   client.watchBlocks({
