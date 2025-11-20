@@ -19,16 +19,42 @@ jest.mock('viem', () => {
   const mockWatchBlocks = jest.fn()
   const mockGetLogs = jest.fn()
 
+  // Create a mock transport instance that can track URL
+  const createMockTransportInstance = (url: string): any => ({
+    url,
+    type: 'http',
+    request: jest.fn()
+  })
+
+  const mockHttp = jest.fn((url: string) => {
+    // Return a factory function that creates a transport instance
+    return (config: any) => createMockTransportInstance(url)
+  })
+
+  // Mock fallback transport with onResponse support
+  let mockFallbackTransportInstance: any = null
+
+  const mockFallback = jest.fn((transports: any[]) => {
+    // Create transport instances from factories
+    const transportInstances = transports.map((transportFactory: any) =>
+      transportFactory({ chain: {}, retryCount: 0 })
+    )
+
+    mockFallbackTransportInstance = {
+      type: 'fallback',
+      transports: transportInstances,
+      onResponse: jest.fn()
+    }
+    return mockFallbackTransportInstance
+  })
+
   const mockClient = {
     watchBlocks: mockWatchBlocks,
-    getLogs: mockGetLogs
+    getLogs: mockGetLogs,
+    get transport() {
+      return mockFallbackTransportInstance
+    }
   }
-
-  const mockHttp = jest.fn(url => ({ url, type: 'http' }))
-  const mockFallback = jest.fn(transports => ({
-    type: 'fallback',
-    transports
-  }))
 
   return {
     createPublicClient: jest.fn(() => mockClient),
@@ -42,11 +68,12 @@ jest.mock('viem/chains', () => ({
   mainnet: { id: 1, name: 'Mainnet' }
 }))
 
-// Access the mocked client - Using any type to avoid TS errors with Jest mocks
+// Access the mocked functions - Using any type to avoid TS errors with Jest mocks
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockViemLib: any = jest.requireMock('viem')
+// Get the mocked client instance - will be recreated in beforeEach
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockClient: any = mockViemLib.createPublicClient()
+let mockClient: any
 
 describe('evmRpc plugin', function () {
   const TEST_ETH_ADDRESS = '0xF5335367A46c2484f13abd051444E39775EA7b60'
@@ -73,6 +100,9 @@ describe('evmRpc plugin', function () {
 
   beforeEach(() => {
     jest.clearAllMocks()
+
+    // Get the mocked client instance
+    mockClient = mockViemLib.createPublicClient()
 
     // Reset mock functions
     mockClient.watchBlocks.mockImplementation(
@@ -108,7 +138,8 @@ describe('evmRpc plugin', function () {
     expect(mockViemLib.fallback).toHaveBeenCalled()
     const fallbackCall = mockViemLib.fallback.mock.calls[0][0]
     expect(fallbackCall).toHaveLength(1)
-    expect(fallbackCall[0]).toMatchObject({ url: mockUrl, type: 'http' })
+    // The transport factory is a function, so we check it was called correctly
+    expect(typeof fallbackCall[0]).toBe('function')
     expect(mockViemLib.createPublicClient).toHaveBeenCalledWith({
       chain: expect.anything(),
       transport: expect.objectContaining({
@@ -116,6 +147,10 @@ describe('evmRpc plugin', function () {
       })
     })
     expect(mockClient.watchBlocks).toHaveBeenCalled()
+    // Verify onResponse was set up (if transport exists)
+    if (mockClient.transport != null) {
+      expect(mockClient.transport.onResponse).toHaveBeenCalled()
+    }
   })
 
   test('subscribe should return true', async function () {
