@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Support multiple RPC urls for EvmRpc plugins.
+
 ## 0.2.4 (2025-11-19)
 
 - fixed: Removed defunct Etherscan V1 servers.

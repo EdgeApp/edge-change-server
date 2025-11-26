@@ -32,11 +32,11 @@ const pluginErrorCounter = new Counter({
 export interface BlockbookOptions {
   pluginId: string
 
-  /** A clean URL for logging */
-  safeUrl?: string
-
   /** The actual connection URL */
   url: string
+
+  /** Optional API key to replace {nowNodesApiKey} template in URL */
+  nowNodesApiKey?: string
 }
 
 interface Connection {
@@ -47,9 +47,17 @@ interface Connection {
 }
 
 export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
-  const { pluginId, safeUrl = opts.url, url } = opts
+  const { pluginId, url, nowNodesApiKey } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
+
+  // Replace template with actual API key for connection URL
+  const connectionUrl =
+    nowNodesApiKey != null
+      ? url.replace('{nowNodesApiKey}', nowNodesApiKey)
+      : url
+  // Use original URL (with template) for logging - no sanitization needed
+  const logUrl = url
 
   const addressToConnection = new Map<string, Connection>()
   const connections: Connection[] = []
@@ -80,7 +88,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     }
   })()
 
-  const logPrefix = `${pluginId} (${safeUrl}):`
+  const logPrefix = `${pluginId} (${logUrl}):`
   const logger = {
     log: (...args: unknown[]): void => {
       console.log(logPrefix, ...args)
@@ -94,7 +102,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   }
 
   function makeConnection(): Connection {
-    const ws = new WebSocket(url)
+    const ws = new WebSocket(connectionUrl)
     const codec = blockbookProtocol.makeClientCodec({
       handleError,
       async handleSend(text) {
@@ -111,12 +119,12 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     })
     const socketReady = new Promise<void>(resolve => {
       ws.on('open', () => {
-        pluginConnectionCounter.inc({ pluginId, url: safeUrl })
+        pluginConnectionCounter.inc({ pluginId, url: logUrl })
         resolve()
       })
     })
     ws.on('close', () => {
-      pluginDisconnectionCounter.inc({ pluginId, url: safeUrl })
+      pluginDisconnectionCounter.inc({ pluginId, url: logUrl })
 
       if (connection === blockConnection) {
         // If this was the block connection, re-init it.
@@ -207,7 +215,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
   function handleError(error: unknown): void {
     // Log to Prometheus:
-    pluginErrorCounter.inc({ pluginId, url: safeUrl })
+    pluginErrorCounter.inc({ pluginId, url: logUrl })
 
     logger.warn('WebSocket error:', error)
   }
