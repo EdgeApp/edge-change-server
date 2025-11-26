@@ -7,8 +7,7 @@ import { makeFakePlugin } from './fakePlugin'
 function makeNowNode(opts: BlockbookOptions): AddressPlugin {
   return makeBlockbook({
     ...opts,
-    safeUrl: opts.url,
-    url: opts.url + '/' + serverConfig.nowNodesApiKey
+    nowNodesApiKey: serverConfig.nowNodesApiKey
   })
 }
 
@@ -16,23 +15,23 @@ export const allPlugins = [
   // Bitcoin family:
   makeNowNode({
     pluginId: 'bitcoin',
-    url: 'wss://btcbook.nownodes.io/wss'
+    url: 'wss://btcbook.nownodes.io/wss/{nowNodesApiKey}'
   }),
   makeNowNode({
     pluginId: 'bitcoincash',
-    url: 'wss://bchbook.nownodes.io/wss'
+    url: 'wss://bchbook.nownodes.io/wss/{nowNodesApiKey}'
   }),
   makeNowNode({
     pluginId: 'dogecoin',
-    url: 'wss://dogebook.nownodes.io/wss'
+    url: 'wss://dogebook.nownodes.io/wss/{nowNodesApiKey}'
   }),
   makeNowNode({
     pluginId: 'litecoin',
-    url: 'wss://ltcbook.nownodes.io/wss'
+    url: 'wss://ltcbook.nownodes.io/wss/{nowNodesApiKey}'
   }),
   makeNowNode({
     pluginId: 'qtum',
-    url: 'wss://qtum-blockbook.nownodes.io/wss'
+    url: 'wss://qtum-blockbook.nownodes.io/wss/{nowNodesApiKey}'
   }),
 
   // Ethereum family:

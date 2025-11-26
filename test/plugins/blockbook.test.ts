@@ -27,7 +27,7 @@ describe('blockbook plugin', function () {
   const host = 'localhost'
   const port = Math.floor(Math.random() * 1000 + 5000)
   const mockBlockbookUrl = USE_REAL_BLOCKBOOK_SERVER
-    ? `wss://btcbook.nownodes.io/wss/${serverConfig.nowNodesApiKey}`
+    ? `wss://btcbook.nownodes.io/wss/{nowNodesApiKey}`
     : `ws://${host}:${port}`
 
   const blockbookWsServer = new WebSocket.Server({
@@ -169,7 +169,9 @@ describe('blockbook plugin', function () {
   beforeEach(() => {
     plugin = makeBlockbook({
       pluginId: 'test',
-      url: mockBlockbookUrl
+      url: mockBlockbookUrl,
+      // For testing real blockbook server, we need to provide the API key
+      nowNodesApiKey: serverConfig.nowNodesApiKey
     })
   })
   afterEach(() => {

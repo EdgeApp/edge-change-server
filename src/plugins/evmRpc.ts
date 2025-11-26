@@ -15,8 +15,6 @@ import {
 export interface EvmRpcOptions {
   pluginId: string
 
-  /** A clean URL for logging */
-  safeUrl?: string
   /** The actual RPC connection URLs (will use fallback transport to try all) */
   urls: string[]
 
@@ -34,16 +32,14 @@ const ERC20_TRANSFER_EVENT = parseAbiItem(
 export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
   const { pluginId, urls, scanAdapters } = opts
 
-  // Use random URL for logging if safeUrl not provided
-  const safeUrl = opts.safeUrl ?? pickRandom(urls)
-
   const [on, emit] = makeEvents<PluginEvents>()
 
   // Track which URL is currently being used by the fallback transport
-  let activeUrl: string = safeUrl
+  let activeUrl: string = pickRandom(urls)
 
-  // Create a logger that uses the active URL
-  const getLogPrefix = (): string => `${pluginId} (${activeUrl}):`
+  // Create a logger that uses the active URL (sanitized for logging)
+  const getLogPrefix = (): string =>
+    `${pluginId} (${sanitizeUrlForLogging(activeUrl)}):`
   const logger: Logger = {
     log: (...args: unknown[]): void => {
       console.log(getLogPrefix(), ...args)
@@ -273,4 +269,16 @@ function getScanAdapter(
     case 'etherscan-v2':
       return makeEtherscanV2ScanAdapter(scanAdapterConfig, logger)
   }
+}
+
+/**
+ * Sanitizes a URL for safe logging by removing sensitive information like API keys.
+ * TODO: Implement URL sanitization once API keys are used for RPC URLs.
+ *
+ * @param url - The URL to sanitize
+ * @returns A sanitized URL safe for logging
+ */
+function sanitizeUrlForLogging(url: string): string {
+  // TODO: We'll clean URLs once API keys are used for RPC URLs
+  return url
 }
