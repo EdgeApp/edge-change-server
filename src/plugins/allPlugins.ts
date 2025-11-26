@@ -7,7 +7,6 @@ import { makeFakePlugin } from './fakePlugin'
 function makeNowNode(opts: BlockbookOptions): AddressPlugin {
   return makeBlockbook({
     ...opts,
-    safeUrl: opts.url,
     url: opts.url + '/' + serverConfig.nowNodesApiKey
   })
 }

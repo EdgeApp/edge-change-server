@@ -9,6 +9,7 @@ import {
   blockbookProtocol,
   BlockbookProtocolServer
 } from '../types/blockbookProtocol'
+import { sanitizeUrlForLogging } from '../util/sanitizeUrlForLogging'
 import { snooze } from '../util/snooze'
 
 const MAX_ADDRESS_COUNT_PER_CONNECTION = 100
@@ -32,9 +33,6 @@ const pluginErrorCounter = new Counter({
 export interface BlockbookOptions {
   pluginId: string
 
-  /** A clean URL for logging */
-  safeUrl?: string
-
   /** The actual connection URL */
   url: string
 }
@@ -47,9 +45,12 @@ interface Connection {
 }
 
 export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
-  const { pluginId, safeUrl = opts.url, url } = opts
+  const { pluginId, url } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
+
+  // Sanitize URL for logging (removes API keys from path segments)
+  const sanitizedUrl = sanitizeUrlForLogging(url)
 
   const addressToConnection = new Map<string, Connection>()
   const connections: Connection[] = []
@@ -80,7 +81,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     }
   })()
 
-  const logPrefix = `${pluginId} (${safeUrl}):`
+  const logPrefix = `${pluginId} (${sanitizedUrl}):`
   const logger = {
     log: (...args: unknown[]): void => {
       console.log(logPrefix, ...args)
@@ -111,12 +112,12 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     })
     const socketReady = new Promise<void>(resolve => {
       ws.on('open', () => {
-        pluginConnectionCounter.inc({ pluginId, url: safeUrl })
+        pluginConnectionCounter.inc({ pluginId, url: sanitizedUrl })
         resolve()
       })
     })
     ws.on('close', () => {
-      pluginDisconnectionCounter.inc({ pluginId, url: safeUrl })
+      pluginDisconnectionCounter.inc({ pluginId, url: sanitizedUrl })
 
       if (connection === blockConnection) {
         // If this was the block connection, re-init it.
@@ -207,7 +208,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
   function handleError(error: unknown): void {
     // Log to Prometheus:
-    pluginErrorCounter.inc({ pluginId, url: safeUrl })
+    pluginErrorCounter.inc({ pluginId, url: sanitizedUrl })
 
     logger.warn('WebSocket error:', error)
   }
