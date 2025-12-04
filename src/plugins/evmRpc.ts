@@ -1,4 +1,4 @@
-import { createPublicClient, http, parseAbiItem } from 'viem'
+import { createPublicClient, fallback, http, parseAbiItem } from 'viem'
 import { mainnet } from 'viem/chains'
 import { makeEvents } from 'yavent'
 
@@ -15,10 +15,8 @@ import {
 export interface EvmRpcOptions {
   pluginId: string
 
-  /** A clean URL for logging */
-  safeUrl?: string
-  /** The actual wss connection URL */
-  url: string
+  /** The actual RPC connection URLs (will use fallback transport to try all) */
+  urls: string[]
 
   /** The scan adapters to use for this plugin. */
   scanAdapters?: ScanAdapterConfig[]
@@ -32,30 +30,74 @@ const ERC20_TRANSFER_EVENT = parseAbiItem(
 )
 
 export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
-  const { pluginId, safeUrl = opts.url, url, scanAdapters } = opts
+  const { pluginId, urls, scanAdapters } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
 
-  const logPrefix = `${pluginId} (${safeUrl}):`
+  // Track which URL is currently being used by the fallback transport
+  let activeUrl: string = pickRandom(urls)
+
+  // Create a logger that uses the active URL (sanitized for logging)
+  const getLogPrefix = (): string =>
+    `${pluginId} (${sanitizeUrlForLogging(activeUrl)}):`
   const logger: Logger = {
     log: (...args: unknown[]): void => {
-      console.log(logPrefix, ...args)
+      console.log(getLogPrefix(), ...args)
     },
     error: (...args: unknown[]): void => {
-      console.error(logPrefix, ...args)
+      console.error(getLogPrefix(), ...args)
     },
     warn: (...args: unknown[]): void => {
-      console.warn(logPrefix, ...args)
+      console.warn(getLogPrefix(), ...args)
     }
   }
 
   // Track subscribed addresses (normalized lowercase address -> original address)
   const subscribedAddresses = new Map<string, string>()
 
+  // Create a map to track which URL corresponds to which transport instance
+  const transportUrlMap = new Map<any, string>()
+
+  // Create fallback transport with all URLs
+  const transports = urls.map(url => {
+    const httpTransport = http(url)
+    // Wrap the transport factory to track URL mapping
+    return (config: any) => {
+      const transportInstance = httpTransport(config)
+      // Store the mapping from transport instance to URL
+      transportUrlMap.set(transportInstance, url)
+      return transportInstance
+    }
+  })
+  const transport = fallback(transports)
+
   const client = createPublicClient({
     chain: mainnet,
-    transport: http(url)
+    transport
   })
+
+  // Access the transport's onResponse callback after client creation to track which URL was used
+  // The transport is created internally, so we need to access it through the client's transport
+  const fallbackTransport = client.transport as any
+  if (fallbackTransport?.onResponse != null) {
+    fallbackTransport.onResponse(
+      ({
+        transport: usedTransport,
+        status
+      }: {
+        transport: any
+        status: 'success' | 'error'
+      }) => {
+        // When a transport succeeds, update the active URL
+        if (status === 'success' && usedTransport != null) {
+          const url = transportUrlMap.get(usedTransport)
+          if (url != null) {
+            activeUrl = url
+          }
+        }
+      }
+    )
+  }
 
   client.watchBlocks({
     includeTransactions: true,
@@ -227,4 +269,16 @@ function getScanAdapter(
     case 'etherscan-v2':
       return makeEtherscanV2ScanAdapter(scanAdapterConfig, logger)
   }
+}
+
+/**
+ * Sanitizes a URL for safe logging by removing sensitive information like API keys.
+ * TODO: Implement URL sanitization once API keys are used for RPC URLs.
+ *
+ * @param url - The URL to sanitize
+ * @returns A sanitized URL safe for logging
+ */
+function sanitizeUrlForLogging(url: string): string {
+  // TODO: We'll clean URLs once API keys are used for RPC URLs
+  return url
 }
