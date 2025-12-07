@@ -24,4 +24,12 @@ export interface AddressPlugin {
    * @returns `true` if the address has updates, `false` otherwise.
    */
   scanAddress?: (address: string, checkpoint?: string) => Promise<boolean>
+
+  /**
+   * Clean up plugin resources (timers, connections, etc).
+   *
+   * This method is optional, because not all plugins require cleanup.
+   * Call this when shutting down the server or replacing plugins.
+   */
+  destroy?: () => void
 }

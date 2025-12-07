@@ -65,6 +65,8 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   const unconfirmedTxWatchlist = new Map<string, Set<string>>()
   // Global connection for block notifications
   let blockConnection: Connection | null = null
+  // Flag to prevent reconnection after destroy
+  let destroyed = false
 
   const getBlockConnectionReconnectDelay = (() => {
     const ROUGH_RECONNECTION_TIME = 3000
@@ -127,13 +129,15 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
       pluginDisconnectionCounter.inc({ pluginId, url: logUrl })
 
       if (connection === blockConnection) {
-        // If this was the block connection, re-init it.
+        // If this was the block connection, re-init it (unless destroyed).
         blockConnection = null
-        snooze(getBlockConnectionReconnectDelay())
-          .then(() => initBlockConnection())
-          .catch(err => {
-            console.error('Failed to re-initialize block connection:', err)
-          })
+        if (!destroyed) {
+          snooze(getBlockConnectionReconnectDelay())
+            .then(() => initBlockConnection())
+            .catch(err => {
+              console.error('Failed to re-initialize block connection:', err)
+            })
+        }
       } else {
         // If this is a connection for a plugin, remove it and emit a subLost event.
         codec.handleClose()
@@ -159,7 +163,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
   // Initialize a dedicated connection for block notifications
   function initBlockConnection(): void {
-    if (blockConnection !== null) return
+    if (destroyed || blockConnection !== null) return
 
     blockConnection = makeConnection()
 
@@ -371,6 +375,27 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
       if (out.unconfirmedTxs > 0) return true
       if (out.transactions != null && out.transactions.length > 0) return true
       return false
+    },
+
+    destroy() {
+      destroyed = true
+      pingTask.stop()
+
+      // Close all address connections
+      for (const connection of connections) {
+        connection.codec.handleClose()
+        connection.ws.close()
+      }
+      connections.length = 0
+      addressToConnection.clear()
+      unconfirmedTxWatchlist.clear()
+
+      // Close block connection
+      if (blockConnection !== null) {
+        blockConnection.codec.handleClose()
+        blockConnection.ws.close()
+        blockConnection = null
+      }
     }
   }
 

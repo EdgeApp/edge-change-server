@@ -36,6 +36,7 @@ const eventCounter = new Counter({
 
 export interface AddressHub {
   handleConnection: (ws: WebSocket) => void
+  destroy: () => void
 }
 
 export interface AddressHubOpts {
@@ -278,6 +279,12 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
       ws.on('message', message => {
         codec.handleMessage(messageToString(message))
       })
+    },
+
+    destroy() {
+      for (const plugin of plugins) {
+        plugin.destroy?.()
+      }
     }
   }
 }
