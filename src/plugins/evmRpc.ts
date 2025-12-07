@@ -55,8 +55,9 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
   // Track subscribed addresses (normalized lowercase address -> original address)
   const subscribedAddresses = new Map<string, string>()
 
-  // Create a map to track which URL corresponds to which transport instance
-  const transportUrlMap = new Map<any, string>()
+  // Create a map to track which URL corresponds to which transport instance.
+  // Using WeakMap so transport instances can be garbage collected when no longer used.
+  const transportUrlMap = new WeakMap<object, string>()
 
   // Create fallback transport with all URLs
   const transports = urls.map(url => {
