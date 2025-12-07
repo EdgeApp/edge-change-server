@@ -113,6 +113,7 @@ async function main(): Promise<void> {
 
   ws.on('close', () => {
     console.log('Disconnected')
+    codec.handleClose()
     close()
   })
 
