@@ -363,6 +363,8 @@ function makeCodec(
     for (const call of remoteCalls.values()) {
       call.reject(new Error('JSON-RPC connection closed'))
     }
+    remoteCalls.clear()
+    remoteSubscriptions.clear()
   }
 
   return {
