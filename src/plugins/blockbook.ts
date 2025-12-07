@@ -139,9 +139,10 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
         codec.handleClose()
         // Remove connection from connections array
         connections.splice(connections.indexOf(connection), 1)
-        // Remove connection from addressToConnection map
+        // Remove connection from addressToConnection map and clean up watchlist
         for (const address of connection.addresses) {
           addressToConnection.delete(address)
+          unconfirmedTxWatchlist.delete(address)
         }
         emit('subLost', { addresses: connection.addresses })
       }
@@ -206,6 +207,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     const addressIndex = connection.addresses.indexOf(address)
     connection.addresses.splice(addressIndex, 1)
     addressToConnection.delete(address)
+    unconfirmedTxWatchlist.delete(address)
     if (connection.addresses.length === 0) {
       connection.ws.close()
       connections.splice(connections.indexOf(connection), 1)
