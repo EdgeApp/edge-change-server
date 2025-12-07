@@ -99,7 +99,7 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
     )
   }
 
-  client.watchBlocks({
+  const unwatchBlocks = client.watchBlocks({
     includeTransactions: true,
     emitMissed: true,
     onError: error => {
@@ -253,6 +253,10 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       const scanAdapter = pickRandom(scanAdapters)
       const adapter = getScanAdapter(scanAdapter, logger)
       return await adapter(address, checkpoint)
+    },
+    destroy() {
+      unwatchBlocks()
+      subscribedAddresses.clear()
     }
   }
 
