@@ -344,13 +344,12 @@ function makeCodec(
         pendingCall.reject(new Error(error.message))
       } else {
         const { asResult } = pendingCall
-        let cleanResult: unknown
         try {
-          cleanResult = asResult(result)
+          const cleanResult = asResult(result)
+          pendingCall.resolve(cleanResult)
         } catch (error) {
           pendingCall.reject(error)
         }
-        pendingCall.resolve(cleanResult)
       }
     } else {
       sendError(-32600, `Invalid JSON-RPC request / response`).catch(
@@ -363,6 +362,8 @@ function makeCodec(
     for (const call of remoteCalls.values()) {
       call.reject(new Error('JSON-RPC connection closed'))
     }
+    remoteCalls.clear()
+    remoteSubscriptions.clear()
   }
 
   return {

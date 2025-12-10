@@ -51,14 +51,38 @@ async function server(): Promise<void> {
   const { allPlugins } = await import('./plugins/allPlugins')
   const { listenPort, listenHost } = serverConfig
 
-  const server = new WebSocket.Server({
+  const wss = new WebSocket.Server({
     port: listenPort,
     host: listenHost
   })
   console.log(`WebSocket server listening on port ${listenPort}`)
 
   const hub = makeAddressHub({ plugins: allPlugins, logger: console })
-  server.on('connection', ws => hub.handleConnection(ws))
+  wss.on('connection', ws => hub.handleConnection(ws))
+
+  // Graceful shutdown handler
+  const shutdown = (): void => {
+    console.log(`Worker ${process.pid} shutting down...`)
+
+    // Stop accepting new connections
+    wss.close(() => {
+      console.log(`Worker ${process.pid} WebSocket server closed`)
+    })
+
+    // Close all existing client connections
+    for (const client of wss.clients) {
+      client.close(1001, 'Server shutting down')
+    }
+
+    // Clean up plugin resources (timers, WebSocket connections, etc.)
+    hub.destroy()
+
+    console.log(`Worker ${process.pid} cleanup complete`)
+    process.exit(0)
+  }
+
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', shutdown)
 }
 
 main().catch(error => {

@@ -55,8 +55,9 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
   // Track subscribed addresses (normalized lowercase address -> original address)
   const subscribedAddresses = new Map<string, string>()
 
-  // Create a map to track which URL corresponds to which transport instance
-  const transportUrlMap = new Map<any, string>()
+  // Create a map to track which URL corresponds to which transport instance.
+  // Using WeakMap so transport instances can be garbage collected when no longer used.
+  const transportUrlMap = new WeakMap<object, string>()
 
   // Create fallback transport with all URLs
   const transports = urls.map(url => {
@@ -99,7 +100,7 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
     )
   }
 
-  client.watchBlocks({
+  const unwatchBlocks = client.watchBlocks({
     includeTransactions: true,
     emitMissed: true,
     onError: error => {
@@ -253,6 +254,10 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       const scanAdapter = pickRandom(scanAdapters)
       const adapter = getScanAdapter(scanAdapter, logger)
       return await adapter(address, checkpoint)
+    },
+    destroy() {
+      unwatchBlocks()
+      subscribedAddresses.clear()
     }
   }
 
