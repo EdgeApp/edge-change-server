@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.6 (2025-12-10)
+
 ## 0.2.5 (2025-12-04)
 
 - added: Support multiple RPC urls for EvmRpc plugins.
