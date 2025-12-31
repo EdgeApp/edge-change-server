@@ -1,5 +1,2 @@
-export interface Logger {
-  log: (...args: unknown[]) => void
-  error: (...args: unknown[]) => void
-  warn: (...args: unknown[]) => void
-}
+// Re-export Logger from the new logger module
+export { Logger, LogData, makeLogger } from './util/logger'

@@ -2,8 +2,9 @@ import { createPublicClient, fallback, http, parseAbiItem } from 'viem'
 import { mainnet } from 'viem/chains'
 import { makeEvents } from 'yavent'
 
-import { Logger } from '../types'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
+import { getAddressPrefix } from '../util/addressUtils'
+import { Logger, makeLogger } from '../util/logger'
 import { pickRandom } from '../util/pickRandom'
 import { makeEtherscanV1ScanAdapter } from '../util/scanAdapters/EtherscanV1ScanAdapter'
 import { makeEtherscanV2ScanAdapter } from '../util/scanAdapters/EtherscanV2ScanAdapter'
@@ -34,82 +35,36 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
 
   const [on, emit] = makeEvents<PluginEvents>()
 
-  // Track which URL is currently being used by the fallback transport
-  let activeUrl: string = pickRandom(urls)
-
-  // Create a logger that uses the active URL (sanitized for logging)
-  const getLogPrefix = (): string =>
-    `${pluginId} (${sanitizeUrlForLogging(activeUrl)}):`
-  const logger: Logger = {
-    log: (...args: unknown[]): void => {
-      console.log(getLogPrefix(), ...args)
-    },
-    error: (...args: unknown[]): void => {
-      console.error(getLogPrefix(), ...args)
-    },
-    warn: (...args: unknown[]): void => {
-      console.warn(getLogPrefix(), ...args)
-    }
-  }
+  const logger = makeLogger('evmRpc', pluginId)
 
   // Track subscribed addresses (normalized lowercase address -> original address)
   const subscribedAddresses = new Map<string, string>()
 
-  // Create a map to track which URL corresponds to which transport instance.
-  // Using WeakMap so transport instances can be garbage collected when no longer used.
-  const transportUrlMap = new WeakMap<object, string>()
-
   // Create fallback transport with all URLs
-  const transports = urls.map(url => {
-    const httpTransport = http(url)
-    // Wrap the transport factory to track URL mapping
-    return (config: any) => {
-      const transportInstance = httpTransport(config)
-      // Store the mapping from transport instance to URL
-      transportUrlMap.set(transportInstance, url)
-      return transportInstance
-    }
-  })
-  const transport = fallback(transports)
+  const transport = fallback(urls.map(url => http(url)))
 
   const client = createPublicClient({
     chain: mainnet,
     transport
   })
 
-  // Access the transport's onResponse callback after client creation to track which URL was used
-  // The transport is created internally, so we need to access it through the client's transport
-  const fallbackTransport = client.transport as any
-  if (fallbackTransport?.onResponse != null) {
-    fallbackTransport.onResponse(
-      ({
-        transport: usedTransport,
-        status
-      }: {
-        transport: any
-        status: 'success' | 'error'
-      }) => {
-        // When a transport succeeds, update the active URL
-        if (status === 'success' && usedTransport != null) {
-          const url = transportUrlMap.get(usedTransport)
-          if (url != null) {
-            activeUrl = url
-          }
-        }
-      }
-    )
-  }
-
   const unwatchBlocks = client.watchBlocks({
     includeTransactions: true,
     emitMissed: true,
     onError: error => {
-      logger.error('watchBlocks error', error)
+      logger.error(`watchBlocks error: ${String(error)}`)
     },
     onBlock: async block => {
-      logger.log('onBlock', block.number)
+      logger({
+        blockNum: block.number.toString(),
+        t: 'block',
+        numSubs: subscribedAddresses.size
+      })
+
       // Skip processing if no subscriptions
-      if (subscribedAddresses.size === 0) return
+      if (subscribedAddresses.size === 0) {
+        return
+      }
 
       // Track which subscribed addresses have updates in this block
       const addressesToUpdate = new Set<string>()
@@ -134,10 +89,18 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       })
 
       // Check ERC20 transfers
-      const transferLogs = await client.getLogs({
-        blockHash: block.hash,
-        event: ERC20_TRANSFER_EVENT
-      })
+      const transferLogs = await client
+        .getLogs({
+          blockHash: block.hash,
+          event: ERC20_TRANSFER_EVENT
+        })
+        .catch(error => {
+          logger.error({
+            blockNum: block.number.toString(),
+            t: `getLogs error: ${String(error)}`
+          })
+          throw error
+        })
       transferLogs.forEach(log => {
         const normalizedFromAddress = log.args.from?.toLowerCase()
         const normalizedToAddress = log.args.to?.toLowerCase()
@@ -157,6 +120,7 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
         }
       })
 
+      let traceBlock = true
       // Internal native-value transfers via traces
       if (opts.includeInternal !== false) {
         const addressesFromTraces = new Set<string>()
@@ -181,6 +145,7 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
           }
         } catch (e) {
           // fall through to geth debug_traceTransaction
+          traceBlock = false
         }
 
         if (!traced) {
@@ -199,7 +164,10 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
                 ]
               })
             )
-          )
+          ).catch(error => {
+            logger.error(`debug_traceTransaction error: ${String(error)}`)
+            throw error
+          })
 
           const walk = (node: any): void => {
             if (node == null) return
@@ -225,11 +193,20 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
 
       // Emit update events for all affected subscribed addresses
       for (const originalAddress of addressesToUpdate) {
+        logger({ addr: getAddressPrefix(originalAddress), t: 'tx detected' })
         emit('update', {
           address: originalAddress,
           checkpoint: block.number.toString()
         })
       }
+      logger({
+        blockNum: block.number.toString(),
+        t: 'block processed',
+        internal: opts.includeInternal !== false,
+        traceBlock,
+        numSubs: subscribedAddresses.size,
+        numUpdates: addressesToUpdate.size
+      })
     }
   })
 
@@ -274,16 +251,4 @@ function getScanAdapter(
     case 'etherscan-v2':
       return makeEtherscanV2ScanAdapter(scanAdapterConfig, logger)
   }
-}
-
-/**
- * Sanitizes a URL for safe logging by removing sensitive information like API keys.
- * TODO: Implement URL sanitization once API keys are used for RPC URLs.
- *
- * @param url - The URL to sanitize
- * @returns A sanitized URL safe for logging
- */
-function sanitizeUrlForLogging(url: string): string {
-  // TODO: We'll clean URLs once API keys are used for RPC URLs
-  return url
 }

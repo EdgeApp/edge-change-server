@@ -1,7 +1,7 @@
 import { asArray, asObject, asString, asUnknown } from 'cleaners'
 
 import { serverConfig } from '../../serverConfig'
-import { Logger } from '../../types'
+import { Logger } from '../logger'
 import { pickRandom } from '../pickRandom'
 import { ScanAdapter } from './scanAdapterTypes'
 
@@ -39,7 +39,7 @@ export function makeEtherscanV2ScanAdapter(
     const host = new URL(url).host
     const apiKeys = serverConfig.serviceKeys[host]
     if (apiKeys == null) {
-      logger.warn('No API key found for', host)
+      logger.warn({ host, t: 'No API key found' })
     }
     // Use a random API key:
     const apiKey = apiKeys == null ? undefined : pickRandom(apiKeys)
@@ -48,14 +48,24 @@ export function makeEtherscanV2ScanAdapter(
     }
     const response = await fetchEtherscanV2(url, params)
     if ('error' in response) {
-      logger.error(
-        'scanAddress error',
-        response.httpStatus,
-        response.httpStatusText
-      )
+      logger.error({
+        status: response.httpStatus,
+        statusText: response.httpStatusText,
+        responseText: response.responseText,
+        t: 'scanAddress error'
+      })
       return true
     }
-    const transactionData = asResult(response.json)
+    let transactionData: ReturnType<typeof asResult>
+    try {
+      transactionData = asResult(response.json)
+    } catch (error) {
+      logger.error({
+        t: 'scanAddress asResult cleaner error',
+        response: String(JSON.stringify(response.json))
+      })
+      throw error
+    }
     if (transactionData.status === '1' && transactionData.result.length > 0) {
       return true
     }
@@ -75,11 +85,11 @@ export function makeEtherscanV2ScanAdapter(
     }
     const tokenResponse = await fetchEtherscanV2(url, tokenParams)
     if ('error' in tokenResponse) {
-      logger.error(
-        'scanAddress tokenTx error',
-        tokenResponse.httpStatus,
-        tokenResponse.httpStatusText
-      )
+      logger.error({
+        status: tokenResponse.httpStatus,
+        statusText: tokenResponse.httpStatusText,
+        t: 'scanAddress tokenTx error'
+      })
       return false
     }
     const tokenData = asResult(tokenResponse.json)
@@ -102,14 +112,23 @@ export function makeEtherscanV2ScanAdapter(
     }
     const internalResponse = await fetchEtherscanV2(url, internalParams)
     if ('error' in internalResponse) {
-      logger.error(
-        'scanAddress internalTx error',
-        internalResponse.httpStatus,
-        internalResponse.httpStatusText
-      )
+      logger.error({
+        status: internalResponse.httpStatus,
+        statusText: internalResponse.httpStatusText,
+        t: 'scanAddress internalTx error'
+      })
       return false
     }
-    const internalData = asResult(internalResponse.json)
+    let internalData: ReturnType<typeof asResult>
+    try {
+      internalData = asResult(internalResponse.json)
+    } catch (error) {
+      logger.error({
+        t: 'scanAddress asResult cleaner error',
+        response: String(JSON.stringify(internalResponse.json))
+      })
+      throw error
+    }
     if (internalData.status === '1' && internalData.result.length > 0) {
       return true
     }
@@ -128,7 +147,12 @@ type EtherscanResult =
       json: unknown
       httpStatus: number
     }
-  | { error: boolean; httpStatus: number; httpStatusText: string }
+  | {
+      error: boolean
+      httpStatus: number
+      httpStatusText: string
+      responseText: string
+    }
 
 async function fetchEtherscanV2(
   url: string,
@@ -136,10 +160,12 @@ async function fetchEtherscanV2(
 ): Promise<EtherscanResult> {
   const response = await fetch(`${url}/v2/api?${params.toString()}`)
   if (response.status !== 200) {
+    const text = await response.text().catch(() => '')
     return {
       error: true,
       httpStatus: response.status,
-      httpStatusText: response.statusText
+      httpStatusText: response.statusText,
+      responseText: text
     }
   }
 

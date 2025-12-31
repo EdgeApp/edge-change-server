@@ -147,10 +147,6 @@ describe('evmRpc plugin', function () {
       })
     })
     expect(mockClient.watchBlocks).toHaveBeenCalled()
-    // Verify onResponse was set up (if transport exists)
-    if (mockClient.transport != null) {
-      expect(mockClient.transport.onResponse).toHaveBeenCalled()
-    }
   })
 
   test('subscribe should return true', async function () {
@@ -436,13 +432,14 @@ describe('evmRpc plugin', function () {
     // Call the error handler
     errorHandler(new Error('Test error'))
 
-    // Check that the error was logged
-    // The log prefix includes the plugin ID and URL (which is picked randomly from urls array)
-    expect(consoleSpy.error).toHaveBeenCalled()
-    const errorCall = consoleSpy.error.mock.calls[0]
-    expect(errorCall[0]).toContain('test-evm (')
-    expect(errorCall[0]).toContain(mockUrl)
-    expect(errorCall[1]).toBe('watchBlocks error')
-    expect(errorCall[2]).toBeInstanceOf(Error)
+    // Check that the error was logged in JSON format
+    expect(consoleSpy.log).toHaveBeenCalled()
+    const logCall = consoleSpy.log.mock.calls[0][0]
+    const parsed = JSON.parse(logCall)
+    expect(parsed.s).toBe('evmRpc')
+    expect(parsed.cpid).toBe('test-evm')
+    expect(parsed.l).toBe('error')
+    expect(parsed.t).toContain('watchBlocks error')
+    expect(parsed.t).toContain('Test error')
   })
 })
