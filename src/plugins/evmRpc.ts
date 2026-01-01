@@ -2,6 +2,7 @@ import { createPublicClient, fallback, http, parseAbiItem } from 'viem'
 import { mainnet } from 'viem/chains'
 import { makeEvents } from 'yavent'
 
+import { replaceUrlParams } from '../serverConfig'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { getAddressPrefix } from '../util/addressUtils'
 import { Logger, makeLogger } from '../util/logger'
@@ -40,8 +41,8 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
   // Track subscribed addresses (normalized lowercase address -> original address)
   const subscribedAddresses = new Map<string, string>()
 
-  // Create fallback transport with all URLs
-  const transport = fallback(urls.map(url => http(url)))
+  // Create fallback transport with all URLs (replacing {{param}} placeholders)
+  const transport = fallback(urls.map(url => http(replaceUrlParams(url))))
 
   const client = createPublicClient({
     chain: mainnet,

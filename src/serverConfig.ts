@@ -19,6 +19,9 @@ const asServerConfig = asObject({
 
   // Resources:
   nowNodesApiKey: asOptional(asString, ''),
+  // URL parameter replacements: { paramName: 'apiKeyValue' }
+  // Usage in URLs: 'https://example.com/{{paramName}}/rpc'
+  serviceKeyUrlParams: asOptional(asObject(asString)),
   serviceKeys: asOptional(
     asObject<string[] | undefined>(asArray(asString)),
     () => ({
@@ -31,3 +34,16 @@ export const serverConfig = makeConfig(
   asServerConfig,
   './changeServerConfig.json'
 )
+
+/**
+ * Replaces {{paramName}} placeholders in a URL with values from serviceKeyUrlParams.
+ * Returns the URL unchanged if no placeholders are found or no matching param exists.
+ */
+export function replaceUrlParams(url: string): string {
+  const params = serverConfig.serviceKeyUrlParams ?? {}
+  let result = url
+  for (const [paramName, value] of Object.entries(params)) {
+    result = result.replace(`{{${paramName}}}`, value)
+  }
+  return result
+}
