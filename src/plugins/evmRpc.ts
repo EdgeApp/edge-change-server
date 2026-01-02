@@ -6,7 +6,6 @@ import { replaceUrlParams } from '../serverConfig'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { getAddressPrefix } from '../util/addressUtils'
 import { Logger, makeLogger } from '../util/logger'
-import { pickRandom } from '../util/pickRandom'
 import { makeEtherscanV1ScanAdapter } from '../util/scanAdapters/EtherscanV1ScanAdapter'
 import { makeEtherscanV2ScanAdapter } from '../util/scanAdapters/EtherscanV2ScanAdapter'
 import {
@@ -14,6 +13,7 @@ import {
   ScanAdapterConfig
 } from '../util/scanAdapters/scanAdapterTypes'
 import { snooze } from '../util/snooze'
+import { shuffleArray } from '../util/utils'
 
 const GET_LOGS_RETRY_DELAY = 250
 const GET_LOGS_MAX_RETRIES = 10
@@ -247,9 +247,28 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       if (scanAdapters == null || scanAdapters.length === 0) {
         return true
       }
-      const scanAdapter = pickRandom(scanAdapters)
-      const adapter = getScanAdapter(scanAdapter, logger)
-      return await adapter(address, checkpoint)
+      const randomAdapters = shuffleArray(scanAdapters)
+      for (let i = 0; i < randomAdapters.length; i++) {
+        const randomAdapter = randomAdapters[i]
+        const adapter = getScanAdapter(randomAdapter, logger)
+        try {
+          return await adapter(address, checkpoint)
+        } catch (error) {
+          const t =
+            `scanAdapter error` +
+            (i < randomAdapters.length - 1
+              ? `, retrying...`
+              : `, no more adapters to try`)
+          logger.warn({
+            t,
+            error: String(error),
+            address: getAddressPrefix(address),
+            type: randomAdapter.type
+          })
+          continue
+        }
+      }
+      return true
     },
     destroy() {
       unwatchBlocks()
