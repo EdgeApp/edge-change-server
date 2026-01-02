@@ -1,8 +1,10 @@
 import { asArray, asObject, asString, asUnknown } from 'cleaners'
 
 import { serverConfig } from '../../serverConfig'
+import { getAddressPrefix } from '../addressUtils'
 import { Logger } from '../logger'
 import { pickRandom } from '../pickRandom'
+import { snooze } from '../snooze'
 import { ScanAdapter } from './scanAdapterTypes'
 
 export interface EtherscanV1ScanAdapterConfig {
@@ -32,32 +34,33 @@ export function makeEtherscanV1ScanAdapter(
       endblock: '999999999',
       sort: 'asc'
     })
-    // Use a random API URL:
-    const url = pickRandom(urls)
-    const host = new URL(url).host
-    const apiKeys = serverConfig.serviceKeys[host]
-    if (apiKeys == null) {
-      logger.warn({ host, t: 'No API key found' })
-    }
-    // Use a random API key:
-    const apiKey = apiKeys == null ? undefined : pickRandom(apiKeys)
-    if (apiKey != null) {
-      params.set('apikey', apiKey)
-    }
-    const response = await fetch(`${url}/api?${params.toString()}`)
-    if (response.status !== 200) {
-      const text = await response.text().catch(() => '')
+    const response = await fetchEtherscanV1(urls, params, logger)
+    if ('error' in response) {
       logger.error({
-        status: response.status,
-        statusText: response.statusText,
-        responseText: text,
+        status: response.httpStatus,
+        statusText: response.httpStatusText,
+        responseText: response.responseText,
         t: 'scanAddress error'
       })
       return true
     }
-    const dataRaw = await response.json()
-    const data = asResult(dataRaw)
-    if (data.status === '1' && data.result.length > 0) {
+    let transactionData: ReturnType<typeof asResult>
+    try {
+      transactionData = asResult(response.json)
+    } catch (error) {
+      logger.error({
+        t: 'scanAddress etherscanV1 asResult cleaner error',
+        response: String(JSON.stringify(response.json))
+      })
+      throw error
+    }
+    if (transactionData.status === '1' && transactionData.result.length > 0) {
+      logger({
+        t: 'scanAddress etherscanV1 found normal transactions',
+        address: getAddressPrefix(normalizedAddress),
+        checkpoint: checkpoint,
+        numTxs: transactionData.result.length
+      })
       return true
     }
 
@@ -70,24 +73,41 @@ export function makeEtherscanV1ScanAdapter(
       endblock: '999999999',
       sort: 'asc'
     })
-    if (apiKey != null) {
-      tokenParams.set('apikey', apiKey)
-    }
-    const tokenResponse = await fetch(`${url}/api?${tokenParams.toString()}`)
-    if (tokenResponse.status !== 200) {
+    const tokenResponse = await fetchEtherscanV1(urls, tokenParams, logger)
+    if ('error' in tokenResponse) {
       logger.error({
-        status: tokenResponse.status,
-        statusText: tokenResponse.statusText,
-        t: 'scanAddress tokenTx error'
+        status: tokenResponse.httpStatus,
+        statusText: tokenResponse.httpStatusText,
+        address: getAddressPrefix(normalizedAddress),
+        t: 'scanAddress etherscanV1 tokenTx error'
       })
       return false
     }
-    const tokenDataRaw = await tokenResponse.json()
-    const tokenData = asResult(tokenDataRaw)
+    let tokenData: ReturnType<typeof asResult>
+    try {
+      tokenData = asResult(tokenResponse.json)
+    } catch (error) {
+      logger.error({
+        t: 'scanAddress etherscanV1 asResult cleaner error',
+        address: getAddressPrefix(normalizedAddress),
+        response: String(JSON.stringify(tokenResponse.json))
+      })
+      throw error
+    }
     if (tokenData.status === '1' && tokenData.result.length > 0) {
+      logger({
+        t: 'scanAddress etherscanV1 found token transactions',
+        address: getAddressPrefix(normalizedAddress),
+        checkpoint: checkpoint,
+        numTxs: tokenData.result.length
+      })
       return true
     }
-
+    logger({
+      t: 'scanAddress etherscanV1 found no transactions',
+      address: getAddressPrefix(normalizedAddress),
+      checkpoint: checkpoint
+    })
     return false
   }
 }
@@ -96,3 +116,83 @@ const asResult = asObject({
   status: asString,
   result: asArray(asUnknown)
 })
+
+type EtherscanResult =
+  | {
+      json: unknown
+      httpStatus: number
+    }
+  | {
+      error: boolean
+      httpStatus: number
+      httpStatusText: string
+      responseText: string
+    }
+
+const rateLimitStrings = [
+  'Max calls per sec rate',
+  'ETIMEDOUT',
+  'RateLimitExceeded'
+]
+const maxRetries = 10
+const retryDelay = 3000
+
+let inRetry = false
+
+async function fetchEtherscanV1(
+  urls: string[],
+  params: URLSearchParams,
+  logger: Logger
+): Promise<EtherscanResult> {
+  let retries = 0
+  let text: string = ''
+  if (inRetry) {
+    await snooze(retryDelay)
+  }
+
+  // Response can't actually be null but typescript can't tell
+  let response: Response | null = null
+
+  while (retries++ < maxRetries) {
+    // Use a random API URL:
+    const url = pickRandom(urls)
+    const host = new URL(url).host
+    const apiKeys = serverConfig.serviceKeys[host]
+
+    // Use a random API key:
+    const apiKey = apiKeys == null ? undefined : pickRandom(apiKeys)
+    if (apiKey != null) {
+      params.set('apikey', apiKey)
+    }
+
+    response = await fetch(`${url}/api?${params.toString()}`)
+    text = await response.text().catch(() => '')
+    if (response.status !== 200) {
+      return {
+        error: true,
+        httpStatus: response.status,
+        httpStatusText: response.statusText,
+        responseText: text
+      }
+    }
+
+    if (rateLimitStrings.some(str => text.includes(str))) {
+      logger.warn({
+        f: 'fetchEtherscanV1',
+        t: 'Rate limit exceeded, retrying...',
+        response: text
+      })
+      inRetry = true
+      await snooze(retryDelay * retries)
+      inRetry = false
+      continue
+    }
+
+    // Success - exit the retry loop
+    break
+  }
+  return {
+    json: JSON.parse(text),
+    httpStatus: response?.status ?? 0
+  }
+}
