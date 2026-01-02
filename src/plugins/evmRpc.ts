@@ -13,6 +13,10 @@ import {
   ScanAdapter,
   ScanAdapterConfig
 } from '../util/scanAdapters/scanAdapterTypes'
+import { snooze } from '../util/snooze'
+
+const GET_LOGS_RETRY_DELAY = 250
+const GET_LOGS_MAX_RETRIES = 10
 
 export interface EvmRpcOptions {
   pluginId: string
@@ -90,36 +94,50 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       })
 
       // Check ERC20 transfers
-      const transferLogs = await client
-        .getLogs({
-          blockHash: block.hash,
-          event: ERC20_TRANSFER_EVENT
-        })
-        .catch(error => {
+      let retries = 0
+      while (true) {
+        try {
+          const transferLogs = await client.getLogs({
+            blockHash: block.hash,
+            event: ERC20_TRANSFER_EVENT
+          })
+          transferLogs.forEach(log => {
+            const normalizedFromAddress = log.args.from?.toLowerCase()
+            const normalizedToAddress = log.args.to?.toLowerCase()
+            const matchingFromAddress =
+              normalizedFromAddress !== undefined
+                ? subscribedAddresses.get(normalizedFromAddress)
+                : undefined
+            const matchingToAddress =
+              normalizedToAddress !== undefined
+                ? subscribedAddresses.get(normalizedToAddress)
+                : undefined
+            if (matchingFromAddress != null) {
+              addressesToUpdate.add(matchingFromAddress)
+            }
+            if (matchingToAddress != null) {
+              addressesToUpdate.add(matchingToAddress)
+            }
+          })
+          break
+        } catch (error) {
+          if (retries++ < GET_LOGS_MAX_RETRIES) {
+            const retryDelay = GET_LOGS_RETRY_DELAY * retries
+            logger.error({
+              blockNum: block.number.toString(),
+              t: `getLogs error. Retrying in ${retryDelay}ms`
+            })
+            await snooze(retryDelay)
+            continue
+          }
           logger.error({
             blockNum: block.number.toString(),
             t: `getLogs error: ${String(error)}`
           })
+
           throw error
-        })
-      transferLogs.forEach(log => {
-        const normalizedFromAddress = log.args.from?.toLowerCase()
-        const normalizedToAddress = log.args.to?.toLowerCase()
-        const matchingFromAddress =
-          normalizedFromAddress !== undefined
-            ? subscribedAddresses.get(normalizedFromAddress)
-            : undefined
-        const matchingToAddress =
-          normalizedToAddress !== undefined
-            ? subscribedAddresses.get(normalizedToAddress)
-            : undefined
-        if (matchingFromAddress != null) {
-          addressesToUpdate.add(matchingFromAddress)
         }
-        if (matchingToAddress != null) {
-          addressesToUpdate.add(matchingToAddress)
-        }
-      })
+      }
 
       let traceBlock = true
       // Internal native-value transfers via traces
