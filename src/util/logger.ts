@@ -25,7 +25,7 @@ export interface Logger {
 const customFormat = (scope: string, cpid?: string): winston.Logform.Format =>
   winston.format.printf(({ level, message, ...rest }) => {
     const d = new Date().toISOString()
-    const obj: Record<string, unknown> = { d, s: scope }
+    const obj: Record<string, unknown> = { d, pid: process.pid, s: scope }
 
     if (cpid != null) obj.cpid = cpid
 
@@ -37,6 +37,7 @@ const customFormat = (scope: string, cpid?: string): winston.Logform.Format =>
       if ('d' in message || 's' in message) {
         return JSON.stringify({
           d,
+          pid: process.pid,
           s: scope,
           l: 'error',
           t: 'Logger error: caller object cannot contain "d" or "s" keys'
