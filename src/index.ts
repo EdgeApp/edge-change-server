@@ -26,8 +26,8 @@ function manageServers(): void {
 
   // Restart workers when they exit:
   cluster.on('exit', (worker, code, signal) => {
-    const { pid = '?' } = worker.process
-    logger({ pid, code, signal, t: 'worker died' })
+    const { pid: workerPid = '?' } = worker.process
+    logger({ workerPid, code, signal, t: 'worker died' })
     cluster.fork()
   })
 
@@ -75,11 +75,11 @@ async function server(): Promise<void> {
 
   // Graceful shutdown handler
   const shutdown = (): void => {
-    logger({ pid: process.pid, t: 'shutting down' })
+    logger({ t: 'shutting down' })
 
     // Stop accepting new connections
     wss.close(() => {
-      logger({ pid: process.pid, t: 'websocket server closed' })
+      logger({ t: 'websocket server closed' })
     })
 
     // Close all existing client connections
@@ -90,7 +90,7 @@ async function server(): Promise<void> {
     // Clean up plugin resources (timers, WebSocket connections, etc.)
     hub.destroy()
 
-    logger({ pid: process.pid, t: 'cleanup complete' })
+    logger({ t: 'cleanup complete' })
     process.exit(0)
   }
 

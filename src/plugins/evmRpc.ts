@@ -57,7 +57,9 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
     includeTransactions: true,
     emitMissed: true,
     onError: error => {
-      logger.error(`watchBlocks error: ${String(error)}`)
+      logger.error({
+        t: `watchBlocks error: ${String(error)}`
+      })
     },
     onBlock: async block => {
       logger({
@@ -184,7 +186,9 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
               })
             )
           ).catch(error => {
-            logger.error(`debug_traceTransaction error: ${String(error)}`)
+            logger.error({
+              t: `debug_traceTransaction error: ${String(error)}`
+            })
             throw error
           })
 
@@ -212,7 +216,10 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
 
       // Emit update events for all affected subscribed addresses
       for (const originalAddress of addressesToUpdate) {
-        logger({ addr: getAddressPrefix(originalAddress), t: 'tx detected' })
+        logger({
+          addr: getAddressPrefix(originalAddress),
+          t: 'tx detected'
+        })
         emit('update', {
           address: originalAddress,
           checkpoint: block.number.toString()

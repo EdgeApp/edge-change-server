@@ -88,7 +88,6 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
         if (socketInfo == null) continue
         const { codec, ip } = socketInfo
         logger({
-          pid: process.pid,
           sid: socketId,
           ip,
           pluginId,
@@ -110,7 +109,6 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
           if (socketInfo == null) continue
           const { codec, ip } = socketInfo
           logger({
-            pid: process.pid,
             sid: socketId,
             ip,
             pluginId,
@@ -172,13 +170,12 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
       const socketId = nextSocketId++
 
       connectionGauge.inc()
-      const pid = process.pid
       const sid = socketId
-      logger({ pid, sid, ip, t: 'connected' })
+      logger({ sid, ip, t: 'connected' })
 
       const codec = changeProtocol.makeServerCodec({
         handleError(error) {
-          logger.error({ pid, sid, ip, t: `send error: ${String(error)}` })
+          logger.error({ sid, ip, t: `send error: ${String(error)}` })
           ws.close(1011, 'Internal error')
         },
 
@@ -196,7 +193,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
               addr: getAddressPrefix(address),
               checkpoint
             }))
-            logger({ pid, sid, ip, subs, t: 'subscribe' })
+            logger({ sid, ip, subs, t: 'subscribe' })
 
             // Do the initial scan:
             const result = await Promise.all(
@@ -221,7 +218,6 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
                     .scanAddress(address, checkpoint)
                     .catch(error => {
                       logger.warn({
-                        pid,
                         sid,
                         ip,
                         t: 'Scan address failed: ' + stackify(error)
@@ -237,7 +233,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
           },
 
           async unsubscribe(params: SubscribeParams[]): Promise<undefined> {
-            logger({ pid, sid, ip, count: params.length, t: 'unsubscribe' })
+            logger({ sid, ip, count: params.length, t: 'unsubscribe' })
 
             for (const param of params) {
               const [pluginId, address] = param
@@ -273,7 +269,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
           }
         }
 
-        logger({ pid, sid, ip, subs, t: 'closed' })
+        logger({ sid, ip, subs, t: 'closed' })
         connectionGauge.dec()
 
         // Cleanup the server codec:
@@ -293,7 +289,6 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
               unsubscribeClientsToPluginAddress(pluginRow, address).catch(
                 error => {
                   logger.error({
-                    pid,
                     sid,
                     ip,
                     t: `unsubscribe error: ${String(error)}`
@@ -306,7 +301,7 @@ export function makeAddressHub(opts: AddressHubOpts): AddressHub {
       })
 
       ws.on('error', error => {
-        logger.error({ pid, sid, ip, t: `connection error: ${String(error)}` })
+        logger.error({ sid, ip, t: `connection error: ${String(error)}` })
       })
 
       ws.on('message', message => {
