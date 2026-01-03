@@ -15,7 +15,6 @@ const asServerConfig = asObject({
   listenPort: asOptional(asNumber, 8008),
   metricsHost: asOptional(asString, '127.0.0.1'),
   metricsPort: asOptional(asNumber, 8009),
-  publicUri: asOptional(asString, 'https://address1.edge.app'),
 
   // Resources:
   nowNodesApiKey: asOptional(asString, ''),

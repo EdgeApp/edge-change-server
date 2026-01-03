@@ -48,6 +48,29 @@ function manageServers(): void {
   })
   httpServer.listen(metricsPort, metricsHost)
   logger({ port: metricsPort, t: 'metrics server listening' })
+
+  // Graceful shutdown handler for primary process
+  const shutdown = (): void => {
+    logger({ t: 'primary shutting down' })
+
+    // Close the metrics server
+    httpServer.close(() => {
+      logger({ t: 'metrics server closed' })
+    })
+
+    // Disconnect all workers
+    for (const id in cluster.workers) {
+      cluster.workers[id]?.process.kill('SIGTERM')
+    }
+
+    // Give workers time to shut down, then exit
+    setTimeout(() => {
+      process.exit(0)
+    }, 5000)
+  }
+
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', shutdown)
 }
 
 async function server(): Promise<void> {

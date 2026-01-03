@@ -23,7 +23,9 @@
     "precommit": "lint-staged && npm-run-all types test prepare",
     "prepare": "husky install && patch-package && npm-run-all clean configure build",
     "start": "node -r sucrase/register src/index.ts",
+    "start.v2": "node -r sucrase/register src/v2/index.ts",
     "test": "jest",
+    "test:integration": "jest --config jest.integration.config.js",
     "types": "tsc",
     "verify": "npm-run-all lint types test prepare"
   },
