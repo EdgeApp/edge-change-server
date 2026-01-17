@@ -3,6 +3,7 @@ import { asArray, asObject, asString, asUnknown } from 'cleaners'
 import { serverConfig } from '../../serverConfig'
 import { Logger } from '../logger'
 import { pickRandom } from '../pickRandom'
+import { serviceKeysFromUrl } from '../serviceKeys'
 import { ScanAdapter } from './scanAdapterTypes'
 
 export interface EtherscanV1ScanAdapterConfig {
@@ -34,15 +35,16 @@ export function makeEtherscanV1ScanAdapter(
     })
     // Use a random API URL:
     const url = pickRandom(urls)
-    const host = new URL(url).host
-    const apiKeys = serverConfig.serviceKeys[host]
-    if (apiKeys == null) {
-      logger.warn({ host }, 'No API key found')
+    if (url == null) {
+      logger.error('No URLs for EtherscanV1ScanAdapter provided')
+      return false
     }
-    // Use a random API key:
-    const apiKey = apiKeys == null ? undefined : pickRandom(apiKeys)
+    const apiKeys = serviceKeysFromUrl(serverConfig.serviceKeys, url)
+    const apiKey = pickRandom(apiKeys)
     if (apiKey != null) {
       params.set('apikey', apiKey)
+    } else {
+      logger.warn({ url, msg: 'No API key found, proceeding without one' })
     }
     const response = await fetch(`${url}/api?${params.toString()}`)
     if (response.status !== 200) {
