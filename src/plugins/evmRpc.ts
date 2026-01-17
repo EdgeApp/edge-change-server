@@ -20,7 +20,7 @@ export interface EvmRpcOptions {
   urls: string[]
 
   /** The scan adapters to use for this plugin. */
-  scanAdapters?: ScanAdapterConfig[]
+  scanAdapters: ScanAdapterConfig[]
 
   /** Enable value-carrying internal transfer detection via traces (default `true`) */
   includeInternal?: boolean
@@ -227,12 +227,13 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
     },
     on,
     scanAddress: async (address, checkpoint): Promise<boolean> => {
-      // if no adapters are provided, then we have no way to implement
-      // scanAddress.
-      if (scanAdapters == null || scanAdapters.length === 0) {
+      const scanAdapter = pickRandom(scanAdapters)
+      if (scanAdapter == null) {
+        // If no adapters are provided, then we have no way to implement
+        // scanAddress.
+        logger.error({ msg: 'No scan adapters provided', pluginId })
         return true
       }
-      const scanAdapter = pickRandom(scanAdapters)
       const adapter = getScanAdapter(scanAdapter, logger)
       return await adapter(address, checkpoint)
     },
