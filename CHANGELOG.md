@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: Migrated to JSON-based logs using Pino library.
+- removed: Removed plugins to reduce load: abstract, amoy, arbitrum, avalanche, base, bobevm, celo, ethereumclassic, ethereumpow, fantom, filecoinfevm, filecoinfevmcalibration, holesky, hyperevm, pulsechain, rsk, sepolia, sonic.
 
 ## 0.2.6 (2025-12-10)
 
