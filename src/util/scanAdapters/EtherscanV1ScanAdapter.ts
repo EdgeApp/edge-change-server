@@ -37,14 +37,14 @@ export function makeEtherscanV1ScanAdapter(
     const url = pickRandom(urls)
     if (url == null) {
       logger.error('No URLs for EtherscanV1ScanAdapter provided')
-      return false
+      return true
     }
     const apiKeys = serviceKeysFromUrl(serverConfig.serviceKeys, url)
     const apiKey = pickRandom(apiKeys)
     if (apiKey != null) {
       params.set('apikey', apiKey)
     } else {
-      logger.warn({ url, msg: 'No API key found, proceeding without one' })
+      logger.warn({ url }, 'No API key found, proceeding without one')
     }
     const response = await fetch(`${url}/api?${params.toString()}`)
     if (response.status !== 200) {
