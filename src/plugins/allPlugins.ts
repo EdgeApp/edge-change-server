@@ -34,86 +34,6 @@ export const allPlugins = [
     url: 'wss://qtum-blockbook.nownodes.io/wss/{nowNodesApiKey}'
   }),
 
-  // Ethereum family:
-  makeEvmRpc({
-    pluginId: 'abstract',
-    urls: [
-      'https://abstract.api.onfinality.io/public' // yellow privacy
-    ],
-    scanAdapters: [
-      {
-        type: 'etherscan-v2',
-        chainId: 2741,
-        urls: ['https://api.etherscan.io']
-      }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'amoy',
-    urls: [
-      'https://api.zan.top/polygon-amoy', // yellow privacy
-      'https://polygon-amoy-public.nodies.app', // yellow privacy
-      'https://polygon-amoy.api.onfinality.io/public' // yellow privacy
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'arbitrum',
-    urls: [
-      'https://arbitrum-one-rpc.publicnode.com', // green privacy
-      'https://arbitrum.meowrpc.com', // green privacy
-      'https://public-arb-mainnet.fastnode.io', // green privacy
-      'https://api.zan.top/arb-one', // yellow privacy
-      'https://arbitrum-one-public.nodies.app', // yellow privacy
-      'https://arbitrum.api.onfinality.io/public', // yellow privacy
-      'https://rpc.poolz.finance/arbitrum' // yellow privacy
-    ],
-    scanAdapters: [
-      {
-        type: 'etherscan-v2',
-        chainId: 42161,
-        urls: ['https://api.etherscan.io']
-      }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'avalanche',
-    urls: [
-      'https://0xrpc.io/avax', // green privacy
-      'https://avalanche-c-chain-rpc.publicnode.com', // green privacy
-      'https://avax.meowrpc.com', // green privacy
-      'https://endpoints.omniatech.io/v1/avax/mainnet/public', // green privacy
-      'https://api.zan.top/avax-mainnet/ext/bc/C/rpc', // yellow privacy
-      'https://avalanche-public.nodies.app/ext/bc/C/rpc', // yellow privacy
-      'https://avalanche.api.onfinality.io/public/ext/bc/C/rpc', // yellow privacy
-      'https://rpc.poolz.finance/avalanche' // yellow privacy
-    ],
-    scanAdapters: [
-      {
-        type: 'etherscan-v2',
-        chainId: 43114,
-        urls: ['https://api.etherscan.io']
-      }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'base',
-    urls: [
-      'https://base-rpc.publicnode.com', // green privacy
-      'https://base.llamarpc.com', // green privacy
-      'https://base.meowrpc.com', // green privacy
-      'https://api.zan.top/base-mainnet', // yellow privacy
-      'https://base-public.nodies.app', // yellow privacy
-      'https://base.api.onfinality.io/public', // yellow privacy
-      'https://rpc.poolz.finance/base' // yellow privacy
-    ],
-    scanAdapters: [
-      {
-        type: 'etherscan-v2',
-        chainId: 8453,
-        urls: ['https://api.etherscan.io']
-      }
-    ]
-  }),
   makeEvmRpc({
     pluginId: 'binancesmartchain',
     urls: [
@@ -141,35 +61,12 @@ export const allPlugins = [
     ]
   }),
   makeEvmRpc({
-    pluginId: 'bobevm',
-    urls: ['https://rpc.gobob.xyz'], // original URL - all chainlist RPCs failed
-    scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://explorer.gobob.xyz'] }
-    ]
-  }),
-  makeEvmRpc({
     pluginId: 'botanix',
     urls: ['https://rpc.ankr.com/botanix_mainnet'], // green privacy
     scanAdapters: [
       {
         type: 'etherscan-v1',
         urls: ['https://api.routescan.io/v2/network/mainnet/evm/3637/etherscan']
-      }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'celo',
-    urls: [
-      'https://celo-json-rpc.stakely.io', // green privacy
-      'https://celo.api.onfinality.io/public', // yellow privacy
-      'https://rpc.ankr.com/celo' // yellow privacy
-    ],
-    scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://explorer.celo.org/mainnet'] },
-      {
-        type: 'etherscan-v2',
-        chainId: 42220,
-        urls: ['https://api.etherscan.io']
       }
     ]
   }),
@@ -198,64 +95,6 @@ export const allPlugins = [
         type: 'etherscan-v2',
         chainId: 1,
         urls: ['https://api.etherscan.io']
-      }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'ethereumclassic',
-    urls: [
-      'https://0xrpc.io/etc', // green privacy
-      'https://etc.rivet.link', // green privacy
-      'https://ethereum-classic-mainnet.gateway.tatum.io' // green privacy
-    ],
-    scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://etc.blockscout.com'] }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'ethereumpow',
-    urls: ['https://mainnet.ethereumpow.org'] // no chainlist RPCs found, keeping original
-  }),
-  makeEvmRpc({
-    pluginId: 'fantom',
-    urls: [
-      'https://endpoints.omniatech.io/v1/fantom/mainnet/public', // green privacy
-      'https://fantom-json-rpc.stakely.io', // green privacy
-      'https://api.zan.top/ftm-mainnet', // yellow privacy
-      'https://fantom-public.nodies.app', // yellow privacy
-      'https://fantom.api.onfinality.io/public' // yellow privacy
-    ],
-    scanAdapters: [{ type: 'etherscan-v1', urls: ['https://ftmscout.com/'] }]
-  }),
-  makeEvmRpc({
-    pluginId: 'filecoinfevm',
-    urls: [
-      'https://filecoin.chainup.net/rpc/v1', // yellow privacy
-      'https://rpc.ankr.com/filecoin' // yellow privacy
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'filecoinfevmcalibration',
-    urls: ['https://rpc.ankr.com/filecoin_testnet'] // original URL - all chainlist RPCs failed
-  }),
-  makeEvmRpc({
-    pluginId: 'holesky',
-    urls: ['https://ethereum-holesky-rpc.publicnode.com'], // original URL - all chainlist RPCs failed
-    scanAdapters: [
-      {
-        type: 'etherscan-v2',
-        chainId: 17000,
-        urls: ['https://api.etherscan.io']
-      }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'hyperevm',
-    urls: ['https://rpc.hyperliquid.xyz/evm'], // no chainlist RPCs found, keeping original
-    scanAdapters: [
-      {
-        type: 'etherscan-v1',
-        urls: ['https://api.routescan.io/v2/network/mainnet/evm/999/etherscan']
       }
     ]
   }),
@@ -293,52 +132,6 @@ export const allPlugins = [
       {
         type: 'etherscan-v2',
         chainId: 137,
-        urls: ['https://api.etherscan.io']
-      }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'pulsechain',
-    urls: [
-      'https://pulsechain-rpc.publicnode.com', // green privacy
-      'https://rpc.pulsechainrpc.com', // green privacy
-      'https://rpc.pulsechainstats.com' // yellow privacy
-    ],
-    scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://api.scan.pulsechain.com'] }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'rsk',
-    urls: ['https://public-node.rsk.co'], // original URL - all chainlist RPCs failed
-    scanAdapters: [
-      { type: 'etherscan-v1', urls: ['https://rootstock.blockscout.com/'] }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'sepolia',
-    urls: [
-      'https://0xrpc.io/sep', // green privacy
-      'https://ethereum-sepolia-rpc.publicnode.com', // green privacy
-      'https://api.zan.top/eth-sepolia', // yellow privacy
-      'https://eth-sepolia.api.onfinality.io/public', // yellow privacy
-      'https://ethereum-sepolia-public.nodies.app' // yellow privacy
-    ],
-    scanAdapters: [
-      {
-        type: 'etherscan-v2',
-        chainId: 11155111,
-        urls: ['https://api.etherscan.io']
-      }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'sonic',
-    urls: ['https://sonic-json-rpc.stakely.io'], // green privacy
-    scanAdapters: [
-      {
-        type: 'etherscan-v2',
-        chainId: 146,
         urls: ['https://api.etherscan.io']
       }
     ]
