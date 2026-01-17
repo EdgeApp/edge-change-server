@@ -1,38 +1,29 @@
-import { serverConfig } from '../serverConfig'
-import { AddressPlugin } from '../types/addressPlugin'
 import { authenticateUrl } from '../util/authenticateUrl'
-import { BlockbookOptions, makeBlockbook } from './blockbook'
+import { makeBlockbook } from './blockbook'
 import { makeEvmRpc } from './evmRpc'
 import { makeFakePlugin } from './fakePlugin'
 
-function makeNowNode(opts: BlockbookOptions): AddressPlugin {
-  return makeBlockbook({
-    ...opts,
-    nowNodesApiKey: serverConfig.nowNodesApiKey
-  })
-}
-
 export const allPlugins = [
   // Bitcoin family:
-  makeNowNode({
+  makeBlockbook({
     pluginId: 'bitcoin',
-    url: 'wss://btcbook.nownodes.io/wss/{nowNodesApiKey}'
+    url: authenticateUrl('wss://btcbook.nownodes.io/wss/{{apiKey}}')
   }),
-  makeNowNode({
+  makeBlockbook({
     pluginId: 'bitcoincash',
-    url: 'wss://bchbook.nownodes.io/wss/{nowNodesApiKey}'
+    url: authenticateUrl('wss://bchbook.nownodes.io/wss/{{apiKey}}')
   }),
-  makeNowNode({
+  makeBlockbook({
     pluginId: 'dogecoin',
-    url: 'wss://dogebook.nownodes.io/wss/{nowNodesApiKey}'
+    url: authenticateUrl('wss://dogebook.nownodes.io/wss/{{apiKey}}')
   }),
-  makeNowNode({
+  makeBlockbook({
     pluginId: 'litecoin',
-    url: 'wss://ltcbook.nownodes.io/wss/{nowNodesApiKey}'
+    url: authenticateUrl('wss://ltcbook.nownodes.io/wss/{{apiKey}}')
   }),
-  makeNowNode({
+  makeBlockbook({
     pluginId: 'qtum',
-    url: 'wss://qtum-blockbook.nownodes.io/wss/{nowNodesApiKey}'
+    url: authenticateUrl('wss://qtum-blockbook.nownodes.io/wss/{{apiKey}}')
   }),
 
   makeEvmRpc({

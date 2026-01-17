@@ -36,9 +36,6 @@ export interface BlockbookOptions {
 
   /** The actual connection URL */
   url: string
-
-  /** Optional API key to replace {nowNodesApiKey} template in URL */
-  nowNodesApiKey?: string
 }
 
 interface Connection {
@@ -49,17 +46,9 @@ interface Connection {
 }
 
 export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
-  const { pluginId, url, nowNodesApiKey } = opts
+  const { pluginId, url } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
-
-  // Replace template with actual API key for connection URL
-  const connectionUrl =
-    nowNodesApiKey != null
-      ? url.replace('{nowNodesApiKey}', nowNodesApiKey)
-      : url
-  // Use original URL (with template) for logging - no sanitization needed
-  const logUrl = url
 
   const addressToConnection = new Map<string, Connection>()
   const connections: Connection[] = []
@@ -95,7 +84,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   const logger = makeLogger('blockbook', pluginId)
 
   function makeConnection(): Connection {
-    const ws = new WebSocket(connectionUrl)
+    const ws = new WebSocket(url)
     const codec = blockbookProtocol.makeClientCodec({
       handleError,
       async handleSend(text) {
@@ -112,12 +101,12 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     })
     const socketReady = new Promise<void>(resolve => {
       ws.on('open', () => {
-        pluginConnectionCounter.inc({ pluginId, url: logUrl })
+        pluginConnectionCounter.inc({ pluginId, url: url })
         resolve()
       })
     })
     ws.on('close', () => {
-      pluginDisconnectionCounter.inc({ pluginId, url: logUrl })
+      pluginDisconnectionCounter.inc({ pluginId, url: url })
 
       if (connection === blockConnection) {
         // If this was the block connection, re-init it (unless destroyed).
@@ -212,7 +201,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
   function handleError(error: unknown): void {
     // Log to Prometheus:
-    pluginErrorCounter.inc({ pluginId, url: logUrl })
+    pluginErrorCounter.inc({ pluginId, url: url })
 
     logger.warn(`WebSocket error: ${String(error)}`)
   }
