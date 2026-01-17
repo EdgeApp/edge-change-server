@@ -10,6 +10,7 @@ import {
   BlockbookProtocolServer
 } from '../types/blockbookProtocol'
 import { getAddressPrefix } from '../util/addressUtils'
+import { authenticateUrl } from '../util/authenticateUrl'
 import { makeLogger } from '../util/logger'
 import { snooze } from '../util/snooze'
 
@@ -34,11 +35,8 @@ const pluginErrorCounter = new Counter({
 export interface BlockbookOptions {
   pluginId: string
 
-  /** The actual connection URL */
+  /** The URL template with {{apiKey}} placeholder for authentication */
   url: string
-
-  /** Optional API key to replace {nowNodesApiKey} template in URL */
-  nowNodesApiKey?: string
 }
 
 interface Connection {
@@ -49,17 +47,14 @@ interface Connection {
 }
 
 export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
-  const { pluginId, url, nowNodesApiKey } = opts
+  const { pluginId, url } = opts
+
+  // Authenticate the URL for actual connections
+  const connectionUrl = authenticateUrl(url)
+  // Use template URL for metrics to avoid exposing API keys
+  const metricUrl = url
 
   const [on, emit] = makeEvents<PluginEvents>()
-
-  // Replace template with actual API key for connection URL
-  const connectionUrl =
-    nowNodesApiKey != null
-      ? url.replace('{nowNodesApiKey}', nowNodesApiKey)
-      : url
-  // Use original URL (with template) for logging - no sanitization needed
-  const logUrl = url
 
   const addressToConnection = new Map<string, Connection>()
   const connections: Connection[] = []
@@ -112,12 +107,12 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     })
     const socketReady = new Promise<void>(resolve => {
       ws.on('open', () => {
-        pluginConnectionCounter.inc({ pluginId, url: logUrl })
+        pluginConnectionCounter.inc({ pluginId, url: metricUrl })
         resolve()
       })
     })
     ws.on('close', () => {
-      pluginDisconnectionCounter.inc({ pluginId, url: logUrl })
+      pluginDisconnectionCounter.inc({ pluginId, url: metricUrl })
 
       if (connection === blockConnection) {
         // If this was the block connection, re-init it (unless destroyed).
@@ -165,7 +160,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
           .subscribeNewBlock(undefined)
           .then(result => {
             if (result.subscribed) {
-              logger.info({ scope: 'foo' }, 'Block connection initialized')
+              logger.info('Block connection initialized')
             } else {
               logger.error('Failed to subscribe to new blocks')
             }
@@ -212,9 +207,9 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
 
   function handleError(error: unknown): void {
     // Log to Prometheus:
-    pluginErrorCounter.inc({ pluginId, url: logUrl })
+    pluginErrorCounter.inc({ pluginId, url: metricUrl })
 
-    logger.warn(`WebSocket error: ${String(error)}`)
+    logger.warn({ err: error }, 'WebSocket error')
   }
   function subscribeAddresses({
     address,
@@ -222,11 +217,10 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   }: Parameters<
     BlockbookProtocolServer['remoteMethods']['subscribeAddresses']
   >[0]): void {
-    logger.info({
-      addr: getAddressPrefix(address),
-      txid: getAddressPrefix(tx.txid),
-      msg: 'tx detected'
-    })
+    logger.info(
+      { addr: getAddressPrefix(address), txid: getAddressPrefix(tx.txid) },
+      'tx detected'
+    )
     // Add the tx hash to a list of unconfirmed transactions
     watchUnconfirmedTx(address, tx.txid)
     emit('update', { address })
@@ -237,7 +231,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   }: Parameters<
     BlockbookProtocolServer['remoteMethods']['subscribeNewBlock']
   >[0]): void {
-    logger.info({ blockNum: height.toString(), msg: 'block' })
+    logger.info({ blockNum: height.toString() }, 'block')
     // Check unconfirmed transactions and update clients
     for (const [
       address,
