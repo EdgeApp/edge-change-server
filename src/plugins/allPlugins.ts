@@ -29,6 +29,7 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'binancesmartchain',
     urls: [
+      authenticateUrl('wss://lb.drpc.org/ogrpc?network=bsc&dkey={{apiKey}}'),
       authenticateUrl('https://lb.drpc.org/ogrpc?network=bsc&dkey={{apiKey}}')
       // authenticateUrl('https://lb.drpc.live/bsc/{{apiKey}}')
     ],
@@ -42,7 +43,10 @@ export const allPlugins = [
   }),
   makeEvmRpc({
     pluginId: 'botanix',
-    urls: ['https://rpc.ankr.com/botanix_mainnet'], // green privacy
+    urls: [
+      'wss://rpc.ankr.com/botanix_mainnet',
+      'https://rpc.ankr.com/botanix_mainnet'
+    ], // green privacy
     scanAdapters: [
       {
         type: 'etherscan-v1',
@@ -53,6 +57,10 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'ethereum',
     urls: [
+      authenticateUrl('wss://mainnet.infura.io/ws/v3/{{apiKey}}'),
+      authenticateUrl(
+        'wss://lb.drpc.org/ogrpc?network=ethereum&dkey={{apiKey}}'
+      ),
       authenticateUrl('https://mainnet.infura.io/v3/{{apiKey}}'),
       authenticateUrl(
         'https://lb.drpc.org/ogrpc?network=ethereum&dkey={{apiKey}}'
@@ -74,6 +82,9 @@ export const allPlugins = [
     pluginId: 'optimism',
     urls: [
       authenticateUrl(
+        'wss://lb.drpc.org/ogrpc?network=optimism&dkey={{apiKey}}'
+      ),
+      authenticateUrl(
         'https://lb.drpc.org/ogrpc?network=optimism&dkey={{apiKey}}'
       )
       // authenticateUrl('https://lb.drpc.live/optimism/{{apiKey}}')
@@ -94,6 +105,9 @@ export const allPlugins = [
     pluginId: 'polygon',
     urls: [
       authenticateUrl(
+        'wss://lb.drpc.org/ogrpc?network=polygon&dkey={{apiKey}}'
+      ),
+      authenticateUrl(
         'https://lb.drpc.org/ogrpc?network=polygon&dkey={{apiKey}}'
       )
       // authenticateUrl('https://lb.drpc.live/polygon/{{apiKey}}')
@@ -109,6 +123,7 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'zksync',
     urls: [
+      authenticateUrl('wss://lb.drpc.org/ogrpc?network=zksync&dkey={{apiKey}}'),
       authenticateUrl(
         'https://lb.drpc.org/ogrpc?network=zksync&dkey={{apiKey}}'
       )

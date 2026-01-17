@@ -1,4 +1,12 @@
-import { createPublicClient, fallback, http, parseAbiItem } from 'viem'
+import {
+  createPublicClient,
+  fallback,
+  http,
+  HttpTransport,
+  parseAbiItem,
+  webSocket,
+  WebSocketTransport
+} from 'viem'
 import { mainnet } from 'viem/chains'
 import { makeEvents } from 'yavent'
 
@@ -41,7 +49,7 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
   const subscribedAddresses = new Map<string, string>()
 
   // Create fallback transport with all URLs
-  const transport = fallback(urls.map(url => http(url)))
+  const transport = fallback(urls.map(url => createTransport(url)))
 
   const client = createPublicClient({
     chain: mainnet,
@@ -244,6 +252,20 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
   }
 
   return plugin
+}
+
+function createTransport(url: string): HttpTransport | WebSocketTransport {
+  const protocol = new URL(url).protocol
+  switch (protocol) {
+    case 'ws:':
+    case 'wss:':
+      return webSocket(url)
+    case 'http:':
+    case 'https:':
+      return http(url)
+    default:
+      throw new Error(`Unsupported URL protocol: ${protocol}`)
+  }
 }
 
 function getScanAdapter(
