@@ -3,17 +3,26 @@ import http from 'http'
 import { AggregatorRegistry } from 'prom-client'
 
 import { serverConfig } from './serverConfig'
+import { makeAlchemyNotifyApi } from './util/alchemyNotifyApi'
 import { makeLogger } from './util/logger'
+import { makeSigningKeyStore } from './util/signingKeyStore'
+import { makeWebhookRegistry } from './util/webhookRegistry'
+import { startWorker } from './worker'
 
 const logger = makeLogger('master-process')
 
 const aggregatorRegistry = new AggregatorRegistry()
 
-async function main(): Promise<void> {
-  if (cluster.isPrimary) manageServers()
-  else {
-    // Use dynamic import to avoid instantiating worker module state for primary process
-    await import('./worker')
+function main(): void {
+  if (cluster.isPrimary) {
+    manageServers()
+  } else {
+    // Create services for this worker process
+    const notifyApi = makeAlchemyNotifyApi()
+    const signingKeyStore = makeSigningKeyStore({ notifyApi })
+    const webhookRegistry = makeWebhookRegistry()
+
+    startWorker({ notifyApi, signingKeyStore, webhookRegistry })
   }
 }
 
@@ -32,8 +41,25 @@ function manageServers(): void {
     cluster.fork()
   })
 
+  // Relay webhook activity broadcasts between workers so every worker
+  // can match incoming activity against its own subscribedAddresses map:
+  cluster.on('message', (sender, message) => {
+    if (
+      message != null &&
+      typeof message === 'object' &&
+      (message as { type?: string }).type === 'webhook-activity'
+    ) {
+      for (const id in cluster.workers) {
+        const worker = cluster.workers[id]
+        if (worker != null && worker !== sender) {
+          worker.send(message)
+        }
+      }
+    }
+  })
+
   // Set up a Prometheus-compatible metrics server:
-  const httpServer = http.createServer((req, res) => {
+  const metricsServer = http.createServer((req, res) => {
     aggregatorRegistry
       .clusterMetrics()
       .then(metrics => {
@@ -47,11 +73,8 @@ function manageServers(): void {
         res.end(`Could not generate metrics: ${String(error)}`)
       })
   })
-  httpServer.listen(metricsPort, metricsHost)
+  metricsServer.listen(metricsPort, metricsHost)
   logger.info({ port: metricsPort }, 'metrics server listening')
 }
 
-main().catch(error => {
-  logger.error({ err: error }, 'main error')
-  process.exit(1)
-})
+main()
