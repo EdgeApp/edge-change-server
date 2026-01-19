@@ -13,6 +13,10 @@ import {
   ScanAdapterConfig
 } from '../util/scanAdapters/scanAdapterTypes'
 import { shuffleArray } from '../util/shuffleArray'
+import { snooze } from '../util/snooze'
+
+const GET_LOGS_RETRY_DELAY = 1000
+const GET_LOGS_MAX_RETRIES = 3
 
 export interface EvmRpcOptions {
   pluginId: string
@@ -94,22 +98,31 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
         }
       })
 
-      // Check ERC20 transfers
-      const transferLogs = await client
-        .getLogs({
-          blockHash: block.hash,
-          event: ERC20_TRANSFER_EVENT
-        })
-        .catch(error => {
+      // Check ERC20 transfers (with retry for rate limiting)
+      let transferLogs: Array<{
+        args: { from?: `0x${string}`; to?: `0x${string}` }
+      }> = []
+      for (let retry = 0; retry < GET_LOGS_MAX_RETRIES; retry++) {
+        try {
+          transferLogs = await client.getLogs({
+            blockHash: block.hash,
+            event: ERC20_TRANSFER_EVENT
+          })
+          break
+        } catch (error) {
           logger.error(
             {
               err: error,
-              blockNum: block.number.toString()
+              blockNum: block.number.toString(),
+              retry
             },
             'getLogs error'
           )
-          throw error
-        })
+          if (retry < GET_LOGS_MAX_RETRIES - 1) {
+            await snooze(GET_LOGS_RETRY_DELAY * (retry + 1))
+          }
+        }
+      }
       transferLogs.forEach(log => {
         const normalizedFromAddress = log.args.from?.toLowerCase()
         const normalizedToAddress = log.args.to?.toLowerCase()
