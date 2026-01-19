@@ -5,6 +5,7 @@ import WebSocket from 'ws'
 
 import { makeAddressHub } from './hub'
 import { serverConfig } from './serverConfig'
+import { makeAlchemyWebhookHandler } from './util/alchemyWebhookHandler'
 import { makeLogger } from './util/logger'
 
 const logger = makeLogger('server')
@@ -51,8 +52,15 @@ function manageServers(): void {
 }
 
 async function server(): Promise<void> {
-  const { allPlugins } = await import('./plugins/allPlugins')
+  const { makeAllPlugins } = await import('./plugins/allPlugins')
   const { listenPort, listenHost } = serverConfig
+
+  // Create and start the Alchemy webhook handler
+  const webhookHandler = makeAlchemyWebhookHandler()
+  webhookHandler.start()
+
+  // Create all plugins, passing the webhook handler for Alchemy plugins
+  const allPlugins = makeAllPlugins(webhookHandler)
 
   const wss = new WebSocket.Server({
     port: listenPort,
@@ -89,6 +97,9 @@ async function server(): Promise<void> {
 
     // Clean up plugin resources (timers, WebSocket connections, etc.)
     hub.destroy()
+
+    // Stop the webhook server
+    webhookHandler.stop()
 
     logger.info({ pid: process.pid }, 'cleanup complete')
     process.exit(0)
