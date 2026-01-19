@@ -26,12 +26,15 @@ export function makeEtherscanV2ScanAdapter(
     // Make sure address is normalized (lowercase):
     const normalizedAddress = address.toLowerCase()
 
+    // Query 1 block higher than the client's checkpoint:
+    const startblock = String(Number(checkpoint) + 1)
+
     const params = new URLSearchParams({
       chainId: chainId.toString(),
       module: 'account',
       action: 'txlist',
       address: normalizedAddress,
-      startblock: checkpoint,
+      startblock,
       endblock: '999999999',
       sort: 'asc'
     })
@@ -80,7 +83,7 @@ export function makeEtherscanV2ScanAdapter(
       module: 'account',
       action: 'tokentx',
       address: normalizedAddress,
-      startblock: checkpoint,
+      startblock,
       endblock: '999999999',
       sort: 'asc'
     })
@@ -109,7 +112,7 @@ export function makeEtherscanV2ScanAdapter(
       module: 'account',
       action: 'txlistinternal',
       address: normalizedAddress,
-      startblock: checkpoint,
+      startblock,
       endblock: '999999999',
       sort: 'asc'
     })

@@ -414,7 +414,7 @@ describe('evmRpc plugin', function () {
     await plugin.subscribe(TEST_ETH_ADDRESS)
 
     // Use a recent checkpoint to test that the address has no updates
-    const checkpoint = '22491493'
+    const checkpoint = '22491492'
     const result = await plugin.scanAddress(TEST_ETH_ADDRESS, checkpoint)
     expect(result).toBe(false)
   })

@@ -41,19 +41,19 @@ describe('EtherscanV1ScanAdapter', function () {
   })
 
   it('should return true if checkpoint is behind the latest transaction', async function () {
-    const result = await adapter(TEST_ETH_ADDRESS, '12345')
+    const result = await adapter(TEST_ETH_ADDRESS, '12344')
     expect(result).toBe(true)
   })
 
   it('should return false if checkpoint is ahead of the latest transaction', async function () {
-    const result = await adapter(TEST_ETH_ADDRESS, '1234567890')
+    const result = await adapter(TEST_ETH_ADDRESS, '1234567889')
     expect(result).toBe(false)
   })
 
   it('should return true if checkpoint is behind token transaction', async function () {
     const result = await adapter(
       ADDRESS_WITH_TOKEN_TRANSACTION,
-      (TOKEN_TRANSACTION_HEIGHT - 1).toString()
+      (TOKEN_TRANSACTION_HEIGHT - 2).toString()
     )
     expect(result).toBe(true)
   })
@@ -61,7 +61,7 @@ describe('EtherscanV1ScanAdapter', function () {
   it('should return false if checkpoint is ahead of token transaction', async function () {
     const result = await adapter(
       ADDRESS_WITH_TOKEN_TRANSACTION,
-      (TOKEN_TRANSACTION_HEIGHT + 1).toString()
+      TOKEN_TRANSACTION_HEIGHT.toString()
     )
     expect(result).toBe(false)
   })
