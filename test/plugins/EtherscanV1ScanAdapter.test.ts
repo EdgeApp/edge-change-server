@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals'
 
-import { Logger } from '../../src/types'
+import { Logger } from '../../src/util/logger'
 import { makeEtherscanV1ScanAdapter } from '../../src/util/scanAdapters/EtherscanV1ScanAdapter'
 import { mswServer } from '../util/mswServer'
 
@@ -14,11 +14,11 @@ describe('EtherscanV1ScanAdapter', function () {
   const TOKEN_TRANSACTION_HEIGHT = 22499360
 
   // Mock logger for testing
-  const logger: Logger = {
-    log: jest.fn(),
+  const logger = ({
+    info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn()
-  }
+  } as unknown) as Logger
 
   const adapter = makeEtherscanV1ScanAdapter(
     {
