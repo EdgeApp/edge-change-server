@@ -36,7 +36,7 @@ export function makeEtherscanV1ScanAdapter(
     // Use a random API URL:
     const url = pickRandom(urls)
     if (url == null) {
-      logger.error({ msg: 'No URLs for EtherscanV1ScanAdapter provided' })
+      logger.error('No URLs for EtherscanV1ScanAdapter provided')
       return false
     }
     const apiKeys = serviceKeysFromUrl(serverConfig.serviceKeys, url)
@@ -44,17 +44,19 @@ export function makeEtherscanV1ScanAdapter(
     if (apiKey != null) {
       params.set('apikey', apiKey)
     } else {
-      logger.warn({ url, msg: 'No API key found, proceeding without one' })
+      logger.warn({ url }, 'No API key found, proceeding without one')
     }
     const response = await fetch(`${url}/api?${params.toString()}`)
     if (response.status !== 200) {
       const text = await response.text().catch(() => '')
-      logger.error({
-        status: response.status,
-        statusText: response.statusText,
-        responseText: text,
-        msg: 'scanAddress error'
-      })
+      logger.error(
+        {
+          status: response.status,
+          statusText: response.statusText,
+          responseText: text
+        },
+        'scanAddress error'
+      )
       return true
     }
     const dataRaw = await response.json()
@@ -77,11 +79,13 @@ export function makeEtherscanV1ScanAdapter(
     }
     const tokenResponse = await fetch(`${url}/api?${tokenParams.toString()}`)
     if (tokenResponse.status !== 200) {
-      logger.error({
-        status: tokenResponse.status,
-        statusText: tokenResponse.statusText,
-        msg: 'scanAddress tokenTx error'
-      })
+      logger.error(
+        {
+          status: tokenResponse.status,
+          statusText: tokenResponse.statusText
+        },
+        'scanAddress tokenTx error'
+      )
       return false
     }
     const tokenDataRaw = await tokenResponse.json()

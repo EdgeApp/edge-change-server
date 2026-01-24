@@ -27,7 +27,7 @@ function manageServers(): void {
   // Restart workers when they exit:
   cluster.on('exit', (worker, code, signal) => {
     const { pid = '?' } = worker.process
-    logger.info({ pid, code, signal, msg: 'worker died' })
+    logger.info({ pid, code, signal }, 'worker died')
     cluster.fork()
   })
 
@@ -47,7 +47,7 @@ function manageServers(): void {
       })
   })
   httpServer.listen(metricsPort, metricsHost)
-  logger.info({ port: metricsPort, msg: 'metrics server listening' })
+  logger.info({ port: metricsPort }, 'metrics server listening')
 }
 
 async function server(): Promise<void> {
@@ -58,7 +58,7 @@ async function server(): Promise<void> {
     port: listenPort,
     host: listenHost
   })
-  logger.info({ port: listenPort, msg: 'websocket server listening' })
+  logger.info({ port: listenPort }, 'websocket server listening')
 
   const hub = makeAddressHub({ plugins: allPlugins })
   wss.on('connection', (ws, req) => {
@@ -75,11 +75,11 @@ async function server(): Promise<void> {
 
   // Graceful shutdown handler
   const shutdown = (): void => {
-    logger.info({ pid: process.pid, msg: 'shutting down' })
+    logger.info({ pid: process.pid }, 'shutting down')
 
     // Stop accepting new connections
     wss.close(() => {
-      logger.info({ pid: process.pid, msg: 'websocket server closed' })
+      logger.info({ pid: process.pid }, 'websocket server closed')
     })
 
     // Close all existing client connections
@@ -90,7 +90,7 @@ async function server(): Promise<void> {
     // Clean up plugin resources (timers, WebSocket connections, etc.)
     hub.destroy()
 
-    logger.info({ pid: process.pid, msg: 'cleanup complete' })
+    logger.info({ pid: process.pid }, 'cleanup complete')
     process.exit(0)
   }
 
