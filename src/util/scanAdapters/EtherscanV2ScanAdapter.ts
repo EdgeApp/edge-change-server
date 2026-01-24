@@ -39,7 +39,7 @@ export function makeEtherscanV2ScanAdapter(
     const url = pickRandom(urls)
     if (url == null) {
       logger.error('No URLs for EtherscanV2ScanAdapter provided')
-      return false
+      return true
     }
     const apiKeys = serviceKeysFromUrl(serverConfig.serviceKeys, url)
     const apiKey = pickRandom(apiKeys)

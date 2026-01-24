@@ -37,7 +37,7 @@ export function makeEtherscanV1ScanAdapter(
     const url = pickRandom(urls)
     if (url == null) {
       logger.error('No URLs for EtherscanV1ScanAdapter provided')
-      return false
+      return true
     }
     const apiKeys = serviceKeysFromUrl(serverConfig.serviceKeys, url)
     const apiKey = pickRandom(apiKeys)
