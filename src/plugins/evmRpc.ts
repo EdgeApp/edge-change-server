@@ -6,13 +6,13 @@ import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { getAddressPrefix } from '../util/addressUtils'
 import { authenticateUrl } from '../util/authenticateUrl'
 import { Logger, makeLogger } from '../util/logger'
-import { pickRandom } from '../util/pickRandom'
 import { makeEtherscanV1ScanAdapter } from '../util/scanAdapters/EtherscanV1ScanAdapter'
 import { makeEtherscanV2ScanAdapter } from '../util/scanAdapters/EtherscanV2ScanAdapter'
 import {
   ScanAdapter,
   ScanAdapterConfig
 } from '../util/scanAdapters/scanAdapterTypes'
+import { shuffleArray } from '../util/shuffleArray'
 
 export interface EvmRpcOptions {
   pluginId: string
@@ -234,15 +234,33 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
     },
     on,
     scanAddress: async (address, checkpoint): Promise<boolean> => {
-      const scanAdapter = pickRandom(scanAdapters)
-      if (scanAdapter == null) {
-        // If no adapters are provided, then we have no way to implement
-        // scanAddress.
-        logger.error({ pluginId }, 'No scan adapters provided')
+      if (scanAdapters == null || scanAdapters.length === 0) {
         return true
       }
-      const adapter = getScanAdapter(scanAdapter, logger)
-      return await adapter(address, checkpoint)
+      const randomAdapters = shuffleArray(scanAdapters)
+      for (let i = 0; i < randomAdapters.length; i++) {
+        const randomAdapter = randomAdapters[i]
+        const adapter = getScanAdapter(randomAdapter, logger)
+        try {
+          return await adapter(address, checkpoint)
+        } catch (err) {
+          const statusMsg =
+            i < randomAdapters.length - 1
+              ? `retrying...`
+              : `no more adapters to try.`
+          logger.warn(
+            {
+              err,
+              address: getAddressPrefix(address),
+              type: randomAdapter.type
+            },
+            `scanAdapter error, ${statusMsg}`
+          )
+          continue
+        }
+      }
+      // All scan adapters failed; assume the address has updates.
+      return true
     },
     destroy() {
       unwatchBlocks()
