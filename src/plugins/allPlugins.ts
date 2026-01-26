@@ -26,20 +26,6 @@ export const allPlugins = [
   }),
 
   makeEvmRpc({
-    pluginId: 'binancesmartchain',
-    urls: [
-      'https://lb.drpc.org/ogrpc?network=bsc&dkey={{apiKey}}'
-      // 'https://lb.drpc.live/bsc/{{apiKey}}'
-    ],
-    scanAdapters: [
-      {
-        type: 'etherscan-v2',
-        chainId: 56,
-        urls: ['https://api.etherscan.io']
-      }
-    ]
-  }),
-  makeEvmRpc({
     pluginId: 'botanix',
     urls: ['https://rpc.ankr.com/botanix_mainnet'], // green privacy
     scanAdapters: [
@@ -82,20 +68,6 @@ export const allPlugins = [
       {
         type: 'etherscan-v1',
         urls: ['https://api.routescan.io/v2/network/mainnet/evm/10/etherscan']
-      }
-    ]
-  }),
-  makeEvmRpc({
-    pluginId: 'polygon',
-    urls: [
-      'https://lb.drpc.org/ogrpc?network=polygon&dkey={{apiKey}}'
-      // 'https://lb.drpc.live/polygon/{{apiKey}}'
-    ],
-    scanAdapters: [
-      {
-        type: 'etherscan-v2',
-        chainId: 137,
-        urls: ['https://api.etherscan.io']
       }
     ]
   }),
