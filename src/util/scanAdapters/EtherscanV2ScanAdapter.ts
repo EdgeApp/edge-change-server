@@ -157,17 +157,12 @@ const rateLimitStrings = [
 const maxRetries = 10
 const retryDelay = 3000
 
-let inRetry = false
-
 async function fetchEtherscanV2(
   urls: string[],
   params: Record<string, string>,
   logger: Logger
 ): Promise<EtherscanResponse> {
   let retries = 0
-  if (inRetry) {
-    await snooze(retryDelay)
-  }
 
   while (retries++ < maxRetries) {
     // Use a random API URL:
@@ -203,9 +198,7 @@ async function fetchEtherscanV2(
         },
         'Rate limit exceeded, retrying...'
       )
-      inRetry = true
       await snooze(retryDelay * retries)
-      inRetry = false
       continue
     }
 
