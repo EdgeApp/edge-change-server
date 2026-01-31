@@ -9,6 +9,8 @@ import {
   blockbookProtocol,
   BlockbookProtocolServer
 } from '../types/blockbookProtocol'
+import { getAddressPrefix } from '../util/addressUtils'
+import { makeLogger } from '../util/logger'
 import { snooze } from '../util/snooze'
 
 const MAX_ADDRESS_COUNT_PER_CONNECTION = 100
@@ -90,18 +92,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     }
   })()
 
-  const logPrefix = `${pluginId} (${logUrl}):`
-  const logger = {
-    log: (...args: unknown[]): void => {
-      console.log(logPrefix, ...args)
-    },
-    error: (...args: unknown[]): void => {
-      console.error(logPrefix, ...args)
-    },
-    warn: (...args: unknown[]): void => {
-      console.warn(logPrefix, ...args)
-    }
-  }
+  const logger = makeLogger('blockbook', pluginId)
 
   function makeConnection(): Connection {
     const ws = new WebSocket(connectionUrl)
@@ -135,7 +126,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
           snooze(getBlockConnectionReconnectDelay())
             .then(() => initBlockConnection())
             .catch(err => {
-              console.error('Failed to re-initialize block connection:', err)
+              logger.error({ err }, 'Failed to re-initialize block connection')
             })
         }
       } else {
@@ -174,7 +165,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
           .subscribeNewBlock(undefined)
           .then(result => {
             if (result.subscribed) {
-              logger.log('Block connection initialized')
+              logger.info({ scope: 'foo' }, 'Block connection initialized')
             } else {
               logger.error('Failed to subscribe to new blocks')
             }
@@ -223,7 +214,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
     // Log to Prometheus:
     pluginErrorCounter.inc({ pluginId, url: logUrl })
 
-    logger.warn('WebSocket error:', error)
+    logger.warn(`WebSocket error: ${String(error)}`)
   }
   function subscribeAddresses({
     address,
@@ -231,6 +222,11 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   }: Parameters<
     BlockbookProtocolServer['remoteMethods']['subscribeAddresses']
   >[0]): void {
+    logger.info({
+      addr: getAddressPrefix(address),
+      txid: getAddressPrefix(tx.txid),
+      msg: 'tx detected'
+    })
     // Add the tx hash to a list of unconfirmed transactions
     watchUnconfirmedTx(address, tx.txid)
     emit('update', { address })
@@ -241,6 +237,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
   }: Parameters<
     BlockbookProtocolServer['remoteMethods']['subscribeNewBlock']
   >[0]): void {
+    logger.info({ blockNum: height.toString(), msg: 'block' })
     // Check unconfirmed transactions and update clients
     for (const [
       address,
@@ -304,7 +301,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
           await connection.codec.remoteMethods.ping(undefined)
         })
         .catch(error => {
-          logger.error('ping error:', error)
+          logger.error({ err: error }, 'ping error')
         })
     }
 
@@ -315,7 +312,7 @@ export function makeBlockbook(opts: BlockbookOptions): AddressPlugin {
           await blockConnection?.codec.remoteMethods.ping(undefined)
         })
         .catch(error => {
-          logger.error('block connection ping error:', error)
+          logger.error({ err: error }, 'block connection ping error')
         })
     }
   }, 50000)

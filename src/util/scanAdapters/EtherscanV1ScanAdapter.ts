@@ -1,7 +1,7 @@
 import { asArray, asObject, asString, asUnknown } from 'cleaners'
 
 import { serverConfig } from '../../serverConfig'
-import { Logger } from '../../types'
+import { Logger } from '../logger'
 import { pickRandom } from '../pickRandom'
 import { ScanAdapter } from './scanAdapterTypes'
 
@@ -37,7 +37,7 @@ export function makeEtherscanV1ScanAdapter(
     const host = new URL(url).host
     const apiKeys = serverConfig.serviceKeys[host]
     if (apiKeys == null) {
-      logger.warn('No API key found for', host)
+      logger.warn({ host }, 'No API key found')
     }
     // Use a random API key:
     const apiKey = apiKeys == null ? undefined : pickRandom(apiKeys)
@@ -46,7 +46,14 @@ export function makeEtherscanV1ScanAdapter(
     }
     const response = await fetch(`${url}/api?${params.toString()}`)
     if (response.status !== 200) {
-      logger.error('scanAddress error', response.status, response.statusText)
+      logger.error(
+        {
+          status: response.status,
+          statusText: response.statusText,
+          responseText: await response.text().catch(() => '')
+        },
+        'scanAddress error'
+      )
       return true
     }
     const dataRaw = await response.json()
@@ -70,9 +77,12 @@ export function makeEtherscanV1ScanAdapter(
     const tokenResponse = await fetch(`${url}/api?${tokenParams.toString()}`)
     if (tokenResponse.status !== 200) {
       logger.error(
-        'scanAddress tokenTx error',
-        tokenResponse.status,
-        tokenResponse.statusText
+        {
+          status: tokenResponse.status,
+          statusText: tokenResponse.statusText,
+          responseText: await tokenResponse.text().catch(() => '')
+        },
+        'scanAddress tokenTx error'
       )
       return false
     }
