@@ -4,6 +4,7 @@ import { makeEvents } from 'yavent'
 
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { getAddressPrefix } from '../util/addressUtils'
+import { authenticateUrl } from '../util/authenticateUrl'
 import { Logger, makeLogger } from '../util/logger'
 import { pickRandom } from '../util/pickRandom'
 import { makeEtherscanV1ScanAdapter } from '../util/scanAdapters/EtherscanV1ScanAdapter'
@@ -16,7 +17,7 @@ import {
 export interface EvmRpcOptions {
   pluginId: string
 
-  /** The actual RPC connection URLs (will use fallback transport to try all) */
+  /** The RPC URL templates with {{apiKey}} placeholder for authentication */
   urls: string[]
 
   /** The scan adapters to use for this plugin. */
@@ -37,11 +38,14 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
 
   const logger = makeLogger('evmRpc', pluginId)
 
+  // Authenticate URLs for actual connections, keep templates for logging
+  const connectionUrls = urls.map(url => authenticateUrl(url))
+
   // Track subscribed addresses (normalized lowercase address -> original address)
   const subscribedAddresses = new Map<string, string>()
 
-  // Create fallback transport with all URLs
-  const transport = fallback(urls.map(url => http(url)))
+  // Create fallback transport with authenticated URLs
+  const transport = fallback(connectionUrls.map(url => http(url)))
 
   const client = createPublicClient({
     chain: mainnet,
@@ -55,11 +59,13 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       logger.error({ err }, 'watchBlocks error')
     },
     onBlock: async block => {
-      logger.info({
-        blockNum: block.number.toString(),
-        msg: 'block',
-        numSubs: subscribedAddresses.size
-      })
+      logger.info(
+        {
+          blockNum: block.number.toString(),
+          numSubs: subscribedAddresses.size
+        },
+        'block'
+      )
 
       // Skip processing if no subscriptions
       if (subscribedAddresses.size === 0) {
@@ -95,11 +101,13 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
           event: ERC20_TRANSFER_EVENT
         })
         .catch(error => {
-          logger.error({
-            err: error,
-            blockNum: block.number.toString(),
-            msg: 'getLogs error'
-          })
+          logger.error(
+            {
+              err: error,
+              blockNum: block.number.toString()
+            },
+            'getLogs error'
+          )
           throw error
         })
       transferLogs.forEach(log => {
@@ -194,23 +202,22 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
 
       // Emit update events for all affected subscribed addresses
       for (const originalAddress of addressesToUpdate) {
-        logger.info({
-          addr: getAddressPrefix(originalAddress),
-          msg: 'tx detected'
-        })
+        logger.info({ addr: getAddressPrefix(originalAddress) }, 'tx detected')
         emit('update', {
           address: originalAddress,
           checkpoint: block.number.toString()
         })
       }
-      logger.info({
-        blockNum: block.number.toString(),
-        msg: 'block processed',
-        internal: opts.includeInternal !== false,
-        traceBlock,
-        numSubs: subscribedAddresses.size,
-        numUpdates: addressesToUpdate.size
-      })
+      logger.info(
+        {
+          blockNum: block.number.toString(),
+          internal: opts.includeInternal !== false,
+          traceBlock,
+          numSubs: subscribedAddresses.size,
+          numUpdates: addressesToUpdate.size
+        },
+        'block processed'
+      )
     }
   })
 
@@ -231,7 +238,7 @@ export function makeEvmRpc(opts: EvmRpcOptions): AddressPlugin {
       if (scanAdapter == null) {
         // If no adapters are provided, then we have no way to implement
         // scanAddress.
-        logger.error({ msg: 'No scan adapters provided', pluginId })
+        logger.error({ pluginId }, 'No scan adapters provided')
         return true
       }
       const adapter = getScanAdapter(scanAdapter, logger)

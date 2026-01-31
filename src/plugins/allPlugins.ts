@@ -1,6 +1,5 @@
 import { serverConfig } from '../serverConfig'
 import { AddressPlugin } from '../types/addressPlugin'
-import { authenticateUrl } from '../util/authenticateUrl'
 import { BlockbookOptions, makeBlockbook } from './blockbook'
 import { makeEvmRpc } from './evmRpc'
 import { makeFakePlugin } from './fakePlugin'
@@ -38,8 +37,8 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'binancesmartchain',
     urls: [
-      authenticateUrl('https://lb.drpc.org/ogrpc?network=bsc&dkey={{apiKey}}')
-      // authenticateUrl('https://lb.drpc.live/bsc/{{apiKey}}')
+      'https://lb.drpc.org/ogrpc?network=bsc&dkey={{apiKey}}'
+      // 'https://lb.drpc.live/bsc/{{apiKey}}'
     ],
     scanAdapters: [
       {
@@ -62,10 +61,8 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'ethereum',
     urls: [
-      authenticateUrl('https://mainnet.infura.io/v3/{{apiKey}}'),
-      authenticateUrl(
-        'https://lb.drpc.org/ogrpc?network=ethereum&dkey={{apiKey}}'
-      )
+      'https://mainnet.infura.io/v3/{{apiKey}}',
+      'https://lb.drpc.org/ogrpc?network=ethereum&dkey={{apiKey}}'
     ],
     scanAdapters: [
       {
@@ -82,10 +79,8 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'optimism',
     urls: [
-      authenticateUrl(
-        'https://lb.drpc.org/ogrpc?network=optimism&dkey={{apiKey}}'
-      )
-      // authenticateUrl('https://lb.drpc.live/optimism/{{apiKey}}')
+      'https://lb.drpc.org/ogrpc?network=optimism&dkey={{apiKey}}'
+      // 'https://lb.drpc.live/optimism/{{apiKey}}'
     ],
     scanAdapters: [
       {
@@ -102,10 +97,8 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'polygon',
     urls: [
-      authenticateUrl(
-        'https://lb.drpc.org/ogrpc?network=polygon&dkey={{apiKey}}'
-      )
-      // authenticateUrl('https://lb.drpc.live/polygon/{{apiKey}}')
+      'https://lb.drpc.org/ogrpc?network=polygon&dkey={{apiKey}}'
+      // 'https://lb.drpc.live/polygon/{{apiKey}}'
     ],
     scanAdapters: [
       {
@@ -118,10 +111,8 @@ export const allPlugins = [
   makeEvmRpc({
     pluginId: 'zksync',
     urls: [
-      authenticateUrl(
-        'https://lb.drpc.org/ogrpc?network=zksync&dkey={{apiKey}}'
-      )
-      // authenticateUrl('https://lb.drpc.live/zksync/{{apiKey}}')
+      'https://lb.drpc.org/ogrpc?network=zksync&dkey={{apiKey}}'
+      // 'https://lb.drpc.live/zksync/{{apiKey}}'
     ],
     scanAdapters: [
       {
