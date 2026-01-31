@@ -7,5 +7,7 @@ jest.mock('./src/serverConfig', () => ({
       'api.etherscan.io': ['JYMB141VYKJ2KPVMYJUZC8PXGWKUFVFX8N'],
       'eth.blockscout.com': []
     }
-  }
+  },
+  // Pass through URL unchanged in tests (no replacements)
+  replaceUrlParams: (url: string) => url
 }))

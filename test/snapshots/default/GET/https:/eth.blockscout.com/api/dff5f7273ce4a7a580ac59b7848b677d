@@ -1,0 +1,100 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://eth.blockscout.com//api?module=account&action=txlistinternal&address=0xf5335367a46c2484f13abd051444e39775ea7b60&startblock=22491493&endblock=999999999&sort=asc",
+    "body": "",
+    "headers": [],
+    "cookies": []
+  },
+  "response": {
+    "status": 200,
+    "statusText": "OK",
+    "body": "{\"message\":\"No internal transactions found\",\"result\":[],\"status\":\"0\"}",
+    "headers": [
+      [
+        "access-control-allow-credentials",
+        "true"
+      ],
+      [
+        "access-control-allow-origin",
+        "*"
+      ],
+      [
+        "access-control-expose-headers",
+        "bypass-429-option,x-ratelimit-reset,x-ratelimit-limit,x-ratelimit-remaining,api-v2-temp-token"
+      ],
+      [
+        "alt-svc",
+        "h3=\":443\"; ma=86400"
+      ],
+      [
+        "bypass-429-option",
+        "no_bypass"
+      ],
+      [
+        "cache-control",
+        "max-age=0, private, must-revalidate"
+      ],
+      [
+        "cf-cache-status",
+        "DYNAMIC"
+      ],
+      [
+        "cf-ray",
+        "9c09c1ab1c775e27-LAX"
+      ],
+      [
+        "connection",
+        "keep-alive"
+      ],
+      [
+        "content-encoding",
+        "br"
+      ],
+      [
+        "content-type",
+        "application/json; charset=utf-8"
+      ],
+      [
+        "date",
+        "Mon, 19 Jan 2026 22:26:57 GMT"
+      ],
+      [
+        "nel",
+        "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}"
+      ],
+      [
+        "report-to",
+        "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=BnxDg4QXrxL8yGuVW%2BNsJZIbMO4rsDetuBPhN1hIhpeN%2B2g2qg46qg0y8JRg%2FbDsYP20y1X%2BLSB1C9ZuvcOpsIRHSmduGWGHsq2vqLIH7Cf8\"}]}"
+      ],
+      [
+        "server",
+        "cloudflare"
+      ],
+      [
+        "strict-transport-security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "transfer-encoding",
+        "chunked"
+      ],
+      [
+        "x-ratelimit-limit",
+        "600"
+      ],
+      [
+        "x-ratelimit-remaining",
+        "597"
+      ],
+      [
+        "x-ratelimit-reset",
+        "4070"
+      ],
+      [
+        "x-request-id",
+        "0d20e77c6ee35e1a6cdd472df393f35f"
+      ]
+    ]
+  }
+}
