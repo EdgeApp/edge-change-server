@@ -100,12 +100,14 @@ export function makeEtherscanV1ScanAdapter(
       logger
     )
     if (!internalResponse.success) {
-      logger.warn({
-        msg: 'scanAddress etherscanV1 internalTx error',
-        httpStatus: internalResponse.httpStatus,
-        httpStatusText: internalResponse.httpStatusText,
-        responseText: internalResponse.responseText
-      })
+      logger.warn(
+        {
+          httpStatus: internalResponse.httpStatus,
+          httpStatusText: internalResponse.httpStatusText,
+          responseText: internalResponse.responseText
+        },
+        'scanAddress etherscanV1 internalTx error'
+      )
       throw new Error(
         `scanAddress etherscanV1 internalTx error: ${internalResponse.httpStatus} ${internalResponse.httpStatusText}`
       )
@@ -190,11 +192,13 @@ async function fetchEtherscanV1(
     }
 
     if (rateLimitStrings.some(str => text.includes(str))) {
-      logger.warn({
-        func: 'fetchEtherscanV1',
-        msg: 'Rate limit exceeded, retrying...',
-        response: text
-      })
+      logger.warn(
+        {
+          func: 'fetchEtherscanV1',
+          response: text
+        },
+        'Rate limit exceeded, retrying...'
+      )
       inRetry = true
       await snooze(retryDelay * retries)
       inRetry = false
