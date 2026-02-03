@@ -1,12 +1,18 @@
 import cluster from 'cluster'
+import express, { Express } from 'express'
 import http from 'http'
 import { AggregatorRegistry } from 'prom-client'
+import { pickMethod, pickPath } from 'serverlet'
+import { ExpressRequest, makeExpressRoute } from 'serverlet/express'
 import WebSocket from 'ws'
 
 import { makeAddressHub } from './hub'
+import { withWebhookRegistry } from './middleware/withWebhookRegistry'
+import { alchemyWebhookRoute } from './routes/alchemyWebhookRoute'
+import { notFoundRoute } from './routes/notFoundRoute'
 import { serverConfig } from './serverConfig'
-import { makeAlchemyWebhookHandler } from './util/alchemyWebhookHandler'
 import { makeLogger } from './util/logger'
+import { makeWebhookRegistry } from './util/webhookRegistry'
 
 const logger = makeLogger('server')
 
@@ -33,7 +39,7 @@ function manageServers(): void {
   })
 
   // Set up a Prometheus-compatible metrics server:
-  const httpServer = http.createServer((req, res) => {
+  const metricsServer = http.createServer((req, res) => {
     aggregatorRegistry
       .clusterMetrics()
       .then(metrics => {
@@ -47,7 +53,7 @@ function manageServers(): void {
         res.end(`Could not generate metrics: ${String(error)}`)
       })
   })
-  httpServer.listen(metricsPort, metricsHost)
+  metricsServer.listen(metricsPort, metricsHost)
   logger.info({ port: metricsPort }, 'metrics server listening')
 }
 
@@ -55,12 +61,39 @@ async function server(): Promise<void> {
   const { makeAllPlugins } = await import('./plugins/allPlugins')
   const { listenPort, listenHost } = serverConfig
 
-  // Create and start the Alchemy webhook handler
-  const webhookHandler = makeAlchemyWebhookHandler()
-  webhookHandler.start()
+  // Create the webhook registry for plugins to register handlers
+  const webhookRegistry = makeWebhookRegistry()
 
-  // Create all plugins, passing the webhook handler for Alchemy plugins
-  const allPlugins = makeAllPlugins(webhookHandler)
+  // Main serverlet - routes to webhook endpoints
+  const serverlet = pickPath<ExpressRequest>(
+    {
+      '/webhook/alchemy': pickMethod({
+        POST: withWebhookRegistry(webhookRegistry)(alchemyWebhookRoute)
+      })
+    },
+    notFoundRoute
+  )
+
+  // Create Express app
+  const app: Express = express()
+  // Use raw body parser to get the raw string for signature validation
+  app.use(express.text({ type: '*/*' }))
+  // Mount the serverlet
+  app.use(makeExpressRoute(serverlet))
+
+  const { webhookHost, webhookPort } = serverConfig
+  const webhookServer = app.listen(webhookPort, webhookHost, () => {
+    logger.info(
+      {
+        host: webhookHost,
+        port: webhookPort
+      },
+      'HTTP server listening'
+    )
+  })
+
+  // Create all plugins, passing the webhook registry
+  const allPlugins = makeAllPlugins(webhookRegistry)
 
   const wss = new WebSocket.Server({
     port: listenPort,
@@ -98,8 +131,8 @@ async function server(): Promise<void> {
     // Clean up plugin resources (timers, WebSocket connections, etc.)
     hub.destroy()
 
-    // Stop the webhook server
-    webhookHandler.stop()
+    webhookServer.close()
+    logger.info('HTTP server stopped')
 
     logger.info({ pid: process.pid }, 'cleanup complete')
     process.exit(0)

@@ -7,16 +7,13 @@ import {
   AlchemyNotifyApi,
   makeAlchemyNotifyApi
 } from '../util/alchemyNotifyApi'
-import {
-  AlchemyActivity,
-  AlchemyWebhookHandler
-} from '../util/alchemyWebhookHandler'
 import { Logger, makeLogger } from '../util/logger'
+import { AlchemyActivity, WebhookRegistry } from '../util/webhookRegistry'
 
 export interface AlchemyOptions {
   pluginId: string
   network: AlchemyNetwork
-  webhookHandler: AlchemyWebhookHandler
+  webhookRegistry: WebhookRegistry
 }
 
 /**
@@ -26,7 +23,7 @@ export interface AlchemyOptions {
  * notifications when tracked addresses have on-chain activity.
  */
 export function makeAlchemy(opts: AlchemyOptions): AddressPlugin {
-  const { pluginId, network, webhookHandler } = opts
+  const { pluginId, network, webhookRegistry } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
 
@@ -50,7 +47,7 @@ export function makeAlchemy(opts: AlchemyOptions): AddressPlugin {
   const BATCH_DELAY_MS = 1000
 
   /**
-   * Handle incoming activity from the webhook handler
+   * Handle incoming activity from the webhook registry
    */
   function handleActivity(
     _network: string,
@@ -164,8 +161,8 @@ export function makeAlchemy(opts: AlchemyOptions): AddressPlugin {
     }
   }
 
-  // Register this plugin's handler with the webhook handler
-  webhookHandler.registerNetworkHandler(network, handleActivity)
+  // Register this plugin's handler with the webhook registry
+  webhookRegistry.registerNetworkHandler(network, handleActivity)
 
   const plugin: AddressPlugin = {
     pluginId,
@@ -232,8 +229,8 @@ export function makeAlchemy(opts: AlchemyOptions): AddressPlugin {
         batchTimeout = null
       }
 
-      // Unregister from webhook handler
-      webhookHandler.unregisterNetworkHandler(network)
+      // Unregister from webhook registry
+      webhookRegistry.unregisterNetworkHandler(network)
 
       // Clear local state
       subscribedAddresses.clear()

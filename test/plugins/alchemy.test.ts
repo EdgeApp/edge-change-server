@@ -11,9 +11,9 @@ import { makeAlchemy } from '../../src/plugins/alchemy'
 import { AddressPlugin } from '../../src/types/addressPlugin'
 import {
   AlchemyActivity,
-  AlchemyWebhookHandler,
-  WebhookActivityHandler
-} from '../../src/util/alchemyWebhookHandler'
+  WebhookActivityHandler,
+  WebhookRegistry
+} from '../../src/util/webhookRegistry'
 
 // Mock the Alchemy Notify API
 jest.mock('../../src/util/alchemyNotifyApi', () => {
@@ -62,7 +62,7 @@ describe('Alchemy plugin', () => {
   const TEST_SECOND_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
   let plugin: AddressPlugin
-  let mockWebhookHandler: AlchemyWebhookHandler
+  let mockWebhookRegistry: WebhookRegistry
   let registeredHandler: WebhookActivityHandler | null = null
 
   function callRegisteredHandler(
@@ -80,22 +80,21 @@ describe('Alchemy plugin', () => {
     jest.useFakeTimers()
     registeredHandler = null
 
-    // Create mock webhook handler
-    mockWebhookHandler = {
+    // Create mock webhook registry
+    mockWebhookRegistry = {
       registerNetworkHandler: jest.fn(
         (network: string, handler: WebhookActivityHandler) => {
           registeredHandler = handler
         }
       ),
       unregisterNetworkHandler: jest.fn(),
-      start: jest.fn(),
-      stop: jest.fn()
+      handleWebhook: jest.fn()
     }
 
     plugin = makeAlchemy({
       pluginId: 'ethereum',
       network: 'ETH_MAINNET',
-      webhookHandler: mockWebhookHandler
+      webhookRegistry: mockWebhookRegistry
     })
   })
 
@@ -107,7 +106,7 @@ describe('Alchemy plugin', () => {
 
   test('plugin instantiation', () => {
     expect(plugin.pluginId).toBe('ethereum')
-    expect(mockWebhookHandler.registerNetworkHandler).toHaveBeenCalledWith(
+    expect(mockWebhookRegistry.registerNetworkHandler).toHaveBeenCalledWith(
       'ETH_MAINNET',
       expect.any(Function)
     )
@@ -316,7 +315,7 @@ describe('Alchemy plugin', () => {
 
     plugin.destroy?.()
 
-    expect(mockWebhookHandler.unregisterNetworkHandler).toHaveBeenCalledWith(
+    expect(mockWebhookRegistry.unregisterNetworkHandler).toHaveBeenCalledWith(
       'ETH_MAINNET'
     )
   })
