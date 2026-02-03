@@ -2,7 +2,6 @@ import crypto from 'crypto'
 import { HttpResponse, Serverlet } from 'serverlet'
 
 import { WebhookRegistryRequest } from '../middleware/withWebhookRegistry'
-import { serverConfig } from '../serverConfig'
 import { makeLogger } from '../util/logger'
 import { AlchemyActivity, AlchemyWebhookPayload } from '../util/webhookRegistry'
 
@@ -14,15 +13,15 @@ const logger = makeLogger('alchemy-webhook')
  * Serverlet that processes Alchemy webhook payloads.
  * Validates signature, parses payload, and routes to the registry.
  */
-export const alchemyWebhookRoute: Serverlet<WebhookRegistryRequest> = (
+export const alchemyWebhookRoute: Serverlet<WebhookRegistryRequest> = async (
   request
-): HttpResponse => {
-  const { headers, webhookRegistry } = request
+): Promise<HttpResponse> => {
+  const { headers, signingKeyStore, webhookRegistry } = request
   const rawBody: string =
     typeof request.req.body === 'string' ? request.req.body : ''
   const signature = headers['x-alchemy-signature']
 
-  // Validate signature
+  // Validate signature header exists
   if (typeof signature !== 'string') {
     logger.warn({ msg: 'Missing X-Alchemy-Signature header' })
     return {
@@ -32,16 +31,7 @@ export const alchemyWebhookRoute: Serverlet<WebhookRegistryRequest> = (
     }
   }
 
-  if (!validateSignature(rawBody, signature)) {
-    logger.warn({ msg: 'Invalid webhook signature' })
-    return {
-      status: 401,
-      headers: { 'content-type': 'text/plain' },
-      body: 'Invalid signature'
-    }
-  }
-
-  // Parse payload
+  // Parse payload first to get webhookId for signing key lookup
   let payload: AlchemyWebhookPayload
   try {
     payload = JSON.parse(rawBody) as AlchemyWebhookPayload
@@ -51,6 +41,30 @@ export const alchemyWebhookRoute: Serverlet<WebhookRegistryRequest> = (
       status: 400,
       headers: { 'content-type': 'text/plain' },
       body: 'Invalid JSON'
+    }
+  }
+
+  // Look up signing key for this webhook
+  const signingKey = await signingKeyStore.getSigningKey(payload.webhookId)
+  if (signingKey == null) {
+    logger.error({ webhookId: payload.webhookId, msg: 'Unknown webhook ID' })
+    return {
+      status: 401,
+      headers: { 'content-type': 'text/plain' },
+      body: 'Unknown webhook'
+    }
+  }
+
+  // Validate signature
+  if (!validateSignature(rawBody, signature, signingKey)) {
+    logger.warn({
+      webhookId: payload.webhookId,
+      msg: 'Invalid webhook signature'
+    })
+    return {
+      status: 401,
+      headers: { 'content-type': 'text/plain' },
+      body: 'Invalid signature'
     }
   }
 
@@ -79,13 +93,11 @@ export const alchemyWebhookRoute: Serverlet<WebhookRegistryRequest> = (
 /**
  * Validates the webhook signature using HMAC-SHA256
  */
-function validateSignature(rawBody: string, signature: string): boolean {
-  const signingKey = serverConfig.alchemyWebhookSigningKey
-  if (signingKey === '') {
-    logger.error({ msg: 'Missing alchemyWebhookSigningKey in config' })
-    return false
-  }
-
+function validateSignature(
+  rawBody: string,
+  signature: string,
+  signingKey: string
+): boolean {
   const hmac = crypto.createHmac('sha256', signingKey)
   hmac.update(rawBody, 'utf8')
   const expectedSignature = hmac.digest('hex')

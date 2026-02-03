@@ -22,7 +22,7 @@ const asServerConfig = asObject({
   publicUri: asOptional(asString, 'https://address1.edge.app'),
 
   // Alchemy webhook:
-  alchemyWebhookSigningKey: asOptional(asString, '<api-key>'),
+  alchemyAuthToken: asOptional(asString, ''),
 
   // Resources:
   serviceKeys: asOptional(asServiceKeys, () => ({

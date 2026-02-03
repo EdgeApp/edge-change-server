@@ -2,8 +2,6 @@ import fetch from 'node-fetch'
 
 import { serverConfig } from '../serverConfig'
 import { Logger } from './logger'
-import { pickRandom } from './pickRandom'
-import { serviceKeysFromUrl } from './serviceKeys'
 
 // Alchemy network identifiers
 export type AlchemyNetwork =
@@ -63,6 +61,22 @@ interface GetWebhookAddressesResponse {
   }
 }
 
+export interface WebhookInfo {
+  id: string
+  network: string
+  webhook_type: string
+  webhook_url: string
+  is_active: boolean
+  time_created: number
+  signing_key: string
+  version: string
+  app_id?: string
+}
+
+interface GetTeamWebhooksResponse {
+  data: WebhookInfo[]
+}
+
 export interface AlchemyNotifyApi {
   createWebhook: (params: CreateWebhookParams) => Promise<CreateWebhookResponse>
   updateWebhookAddresses: (
@@ -71,22 +85,17 @@ export interface AlchemyNotifyApi {
   getWebhookAddresses: (
     params: GetWebhookAddressesParams
   ) => Promise<GetWebhookAddressesResponse>
+  getTeamWebhooks: () => Promise<WebhookInfo[]>
   deleteWebhook: (webhookId: string) => Promise<void>
 }
 
 export function makeAlchemyNotifyApi(logger: Logger): AlchemyNotifyApi {
   function getAuthToken(): string {
-    const apiKeys = serviceKeysFromUrl(
-      serverConfig.serviceKeys,
-      'https://dashboard.alchemy.com'
-    )
-    const apiKey = pickRandom(apiKeys)
-    if (apiKey == null || apiKey === '') {
-      throw new Error(
-        'Missing Alchemy Auth Token in serviceKeys for dashboard.alchemy.com'
-      )
+    const authToken = serverConfig.alchemyAuthToken
+    if (authToken === '') {
+      throw new Error('Missing alchemyAuthToken in config')
     }
-    return apiKey
+    return authToken
   }
 
   async function apiRequest<T>(
@@ -166,6 +175,14 @@ export function makeAlchemyNotifyApi(logger: Logger): AlchemyNotifyApi {
         `/webhook-addresses?${queryParams.toString()}`,
         'GET'
       )
+    },
+
+    async getTeamWebhooks(): Promise<WebhookInfo[]> {
+      const response = await apiRequest<GetTeamWebhooksResponse>(
+        '/team-webhooks',
+        'GET'
+      )
+      return response.data
     },
 
     async deleteWebhook(webhookId: string): Promise<void> {

@@ -11,7 +11,9 @@ import { withWebhookRegistry } from './middleware/withWebhookRegistry'
 import { alchemyWebhookRoute } from './routes/alchemyWebhookRoute'
 import { notFoundRoute } from './routes/notFoundRoute'
 import { serverConfig } from './serverConfig'
+import { makeAlchemyNotifyApi } from './util/alchemyNotifyApi'
 import { makeLogger } from './util/logger'
+import { makeSigningKeyStore } from './util/signingKeyStore'
 import { makeWebhookRegistry } from './util/webhookRegistry'
 
 const logger = makeLogger('server')
@@ -64,11 +66,17 @@ async function server(): Promise<void> {
   // Create the webhook registry for plugins to register handlers
   const webhookRegistry = makeWebhookRegistry()
 
+  // Create the Alchemy Notify API client and signing key store
+  const notifyApi = makeAlchemyNotifyApi(logger)
+  const signingKeyStore = makeSigningKeyStore({ notifyApi })
+
   // Main serverlet - routes to webhook endpoints
   const serverlet = pickPath<ExpressRequest>(
     {
       '/webhook/alchemy': pickMethod({
-        POST: withWebhookRegistry(webhookRegistry)(alchemyWebhookRoute)
+        POST: withWebhookRegistry({ signingKeyStore, webhookRegistry })(
+          alchemyWebhookRoute
+        )
       })
     },
     notFoundRoute
@@ -92,8 +100,8 @@ async function server(): Promise<void> {
     )
   })
 
-  // Create all plugins, passing the webhook registry
-  const allPlugins = makeAllPlugins(webhookRegistry)
+  // Create all plugins, passing the webhook registry and signing key store
+  const allPlugins = makeAllPlugins({ signingKeyStore, webhookRegistry })
 
   const wss = new WebSocket.Server({
     port: listenPort,

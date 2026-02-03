@@ -9,6 +9,7 @@ import {
 
 import { makeAlchemy } from '../../src/plugins/alchemy'
 import { AddressPlugin } from '../../src/types/addressPlugin'
+import { SigningKeyStore } from '../../src/util/signingKeyStore'
 import {
   AlchemyActivity,
   WebhookActivityHandler,
@@ -38,6 +39,7 @@ jest.mock('../../src/util/alchemyNotifyApi', () => {
         data: [],
         pagination: { cursors: {}, total_count: 0 }
       })),
+      getTeamWebhooks: jest.fn().mockImplementation(async () => []),
       deleteWebhook: jest.fn().mockImplementation(async () => undefined)
     }))
   }
@@ -47,7 +49,7 @@ jest.mock('../../src/util/alchemyNotifyApi', () => {
 jest.mock('../../src/serverConfig', () => ({
   serverConfig: {
     publicUri: 'https://test.edge.app',
-    alchemyWebhookSigningKey: 'test-signing-key',
+    alchemyAuthToken: 'test-auth-token',
     webhookHost: '127.0.0.1',
     webhookPort: 8010,
     serviceKeys: {
@@ -62,6 +64,7 @@ describe('Alchemy plugin', () => {
   const TEST_SECOND_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
   let plugin: AddressPlugin
+  let mockSigningKeyStore: SigningKeyStore
   let mockWebhookRegistry: WebhookRegistry
   let registeredHandler: WebhookActivityHandler | null = null
 
@@ -80,6 +83,13 @@ describe('Alchemy plugin', () => {
     jest.useFakeTimers()
     registeredHandler = null
 
+    // Create mock signing key store
+    mockSigningKeyStore = ({
+      setSigningKey: jest.fn(),
+      getSigningKey: jest.fn(async () => 'test-signing-key'),
+      recoverSigningKeys: jest.fn(async () => undefined)
+    } as unknown) as SigningKeyStore
+
     // Create mock webhook registry
     mockWebhookRegistry = {
       registerNetworkHandler: jest.fn(
@@ -94,6 +104,7 @@ describe('Alchemy plugin', () => {
     plugin = makeAlchemy({
       pluginId: 'ethereum',
       network: 'ETH_MAINNET',
+      signingKeyStore: mockSigningKeyStore,
       webhookRegistry: mockWebhookRegistry
     })
   })

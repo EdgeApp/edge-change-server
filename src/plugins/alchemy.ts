@@ -8,11 +8,13 @@ import {
   makeAlchemyNotifyApi
 } from '../util/alchemyNotifyApi'
 import { Logger, makeLogger } from '../util/logger'
+import { SigningKeyStore } from '../util/signingKeyStore'
 import { AlchemyActivity, WebhookRegistry } from '../util/webhookRegistry'
 
 export interface AlchemyOptions {
   pluginId: string
   network: AlchemyNetwork
+  signingKeyStore: SigningKeyStore
   webhookRegistry: WebhookRegistry
 }
 
@@ -23,7 +25,7 @@ export interface AlchemyOptions {
  * notifications when tracked addresses have on-chain activity.
  */
 export function makeAlchemy(opts: AlchemyOptions): AddressPlugin {
-  const { pluginId, network, webhookRegistry } = opts
+  const { pluginId, network, signingKeyStore, webhookRegistry } = opts
 
   const [on, emit] = makeEvents<PluginEvents>()
 
@@ -116,6 +118,7 @@ export function makeAlchemy(opts: AlchemyOptions): AddressPlugin {
         })
 
         webhookId = response.data.id
+        signingKeyStore.setSigningKey(webhookId, response.data.signing_key)
         logger.info({ webhookId, msg: 'Created webhook' })
 
         // Clear toAdd since they were included in creation

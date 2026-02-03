@@ -1,11 +1,16 @@
 import { AddressPlugin } from '../types/addressPlugin'
+import { SigningKeyStore } from '../util/signingKeyStore'
 import { WebhookRegistry } from '../util/webhookRegistry'
 import { makeAlchemy } from './alchemy'
 import { makeFakePlugin } from './fakePlugin'
 
-export function makeAllPlugins(
+export interface AllPluginsOptions {
+  signingKeyStore: SigningKeyStore
   webhookRegistry: WebhookRegistry
-): AddressPlugin[] {
+}
+
+export function makeAllPlugins(opts: AllPluginsOptions): AddressPlugin[] {
+  const { signingKeyStore, webhookRegistry } = opts
   return [
     // Bitcoin family:
     // makeBlockbook({
@@ -33,16 +38,19 @@ export function makeAllPlugins(
     makeAlchemy({
       pluginId: 'ethereum',
       network: 'ETH_MAINNET',
+      signingKeyStore,
       webhookRegistry
     }),
     makeAlchemy({
       pluginId: 'polygon',
       network: 'MATIC_MAINNET',
+      signingKeyStore,
       webhookRegistry
     }),
     makeAlchemy({
       pluginId: 'optimism',
       network: 'OPT_MAINNET',
+      signingKeyStore,
       webhookRegistry
     }),
 
