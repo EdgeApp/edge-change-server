@@ -68,8 +68,9 @@ describe('AddressHub', function () {
       host,
       port
     })
-    serverWs.on('connection', ws => {
-      hub.handleConnection(ws)
+    serverWs.on('connection', (ws, req) => {
+      const ip = req.socket.remoteAddress ?? 'unknown'
+      hub.handleConnection(ws, ip)
     })
   })
   afterAll(() => {

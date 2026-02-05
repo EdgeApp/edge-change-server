@@ -12,9 +12,9 @@ import WebSocket from 'ws'
 
 import { messageToString } from '../../src/messageToString'
 import { makeBlockbook } from '../../src/plugins/blockbook'
-import { serverConfig } from '../../src/serverConfig'
 import { AddressPlugin } from '../../src/types/addressPlugin'
 import { blockbookProtocol } from '../../src/types/blockbookProtocol'
+import { authenticateUrl } from '../../src/util/authenticateUrl'
 
 // Enable this for debug testing against a real server. It may break some tests.
 const USE_REAL_BLOCKBOOK_SERVER = false
@@ -27,7 +27,7 @@ describe('blockbook plugin', function () {
   const host = 'localhost'
   const port = Math.floor(Math.random() * 1000 + 5000)
   const mockBlockbookUrl = USE_REAL_BLOCKBOOK_SERVER
-    ? `wss://btcbook.nownodes.io/wss/{nowNodesApiKey}`
+    ? authenticateUrl('wss://btcbook.nownodes.io/wss/{{apiKey}}')
     : `ws://${host}:${port}`
 
   const blockbookWsServer = new WebSocket.Server({
@@ -169,9 +169,7 @@ describe('blockbook plugin', function () {
   beforeEach(() => {
     plugin = makeBlockbook({
       pluginId: 'test',
-      url: mockBlockbookUrl,
-      // For testing real blockbook server, we need to provide the API key
-      nowNodesApiKey: serverConfig.nowNodesApiKey
+      url: mockBlockbookUrl
     })
   })
   afterEach(() => {

@@ -5,6 +5,9 @@ import WebSocket from 'ws'
 
 import { makeAddressHub } from './hub'
 import { serverConfig } from './serverConfig'
+import { makeLogger } from './util/logger'
+
+const logger = makeLogger('server')
 
 const aggregatorRegistry = new AggregatorRegistry()
 
@@ -24,7 +27,7 @@ function manageServers(): void {
   // Restart workers when they exit:
   cluster.on('exit', (worker, code, signal) => {
     const { pid = '?' } = worker.process
-    console.log(`Worker ${pid} died with code ${code} and signal ${signal}`)
+    logger.info({ pid, code, signal }, 'worker died')
     cluster.fork()
   })
 
@@ -44,7 +47,7 @@ function manageServers(): void {
       })
   })
   httpServer.listen(metricsPort, metricsHost)
-  console.log(`Metrics server listening on port ${metricsPort}`)
+  logger.info({ port: metricsPort }, 'metrics server listening')
 }
 
 async function server(): Promise<void> {
@@ -55,18 +58,28 @@ async function server(): Promise<void> {
     port: listenPort,
     host: listenHost
   })
-  console.log(`WebSocket server listening on port ${listenPort}`)
+  logger.info({ port: listenPort }, 'websocket server listening')
 
-  const hub = makeAddressHub({ plugins: allPlugins, logger: console })
-  wss.on('connection', ws => hub.handleConnection(ws))
+  const hub = makeAddressHub({ plugins: allPlugins })
+  wss.on('connection', (ws, req) => {
+    // Extract IP from X-Forwarded-For header (if behind proxy) or socket
+    const forwardedFor = req.headers['x-forwarded-for']
+    const ip =
+      (typeof forwardedFor === 'string'
+        ? forwardedFor.split(',')[0].trim()
+        : undefined) ??
+      req.socket.remoteAddress ??
+      'unknown'
+    hub.handleConnection(ws, ip)
+  })
 
   // Graceful shutdown handler
   const shutdown = (): void => {
-    console.log(`Worker ${process.pid} shutting down...`)
+    logger.info({ pid: process.pid }, 'shutting down')
 
     // Stop accepting new connections
     wss.close(() => {
-      console.log(`Worker ${process.pid} WebSocket server closed`)
+      logger.info({ pid: process.pid }, 'websocket server closed')
     })
 
     // Close all existing client connections
@@ -77,7 +90,7 @@ async function server(): Promise<void> {
     // Clean up plugin resources (timers, WebSocket connections, etc.)
     hub.destroy()
 
-    console.log(`Worker ${process.pid} cleanup complete`)
+    logger.info({ pid: process.pid }, 'cleanup complete')
     process.exit(0)
   }
 
@@ -86,6 +99,6 @@ async function server(): Promise<void> {
 }
 
 main().catch(error => {
-  console.error(error)
+  logger.error({ err: error }, 'main error')
   process.exit(1)
 })
