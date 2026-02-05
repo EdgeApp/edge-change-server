@@ -85,6 +85,40 @@ export function makeEtherscanV1ScanAdapter(
       return true
     }
 
+    // If no token transactions, check for internal transactions:
+    const internalParams = {
+      module: 'account',
+      action: 'txlistinternal',
+      address: normalizedAddress,
+      startblock,
+      endblock: '999999999',
+      sort: 'asc'
+    }
+    const internalResponse = await fetchEtherscanV1(
+      urls,
+      internalParams,
+      logger
+    )
+    if (!internalResponse.success) {
+      logger.warn(
+        {
+          httpStatus: internalResponse.httpStatus,
+          httpStatusText: internalResponse.httpStatusText,
+          responseText: internalResponse.responseText
+        },
+        'scanAddress etherscanV1 internalTx error'
+      )
+      throw new Error(
+        `scanAddress etherscanV1 internalTx error: ${internalResponse.httpStatus} ${internalResponse.httpStatusText}`
+      )
+    }
+    if (
+      internalResponse.data.status === '1' &&
+      internalResponse.data.result.length > 0
+    ) {
+      return true
+    }
+
     return false
   }
 }
