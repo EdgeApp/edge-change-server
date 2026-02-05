@@ -1,9 +1,10 @@
-import { asArray, asObject, asString, asUnknown } from 'cleaners'
+import { asArray, asJSON, asObject, asString, asUnknown } from 'cleaners'
 
 import { serverConfig } from '../../serverConfig'
 import { Logger } from '../logger'
 import { pickRandom } from '../pickRandom'
 import { serviceKeysFromUrl } from '../serviceKeys'
+import { snooze } from '../snooze'
 import { ScanAdapter } from './scanAdapterTypes'
 
 export interface EtherscanV2ScanAdapterConfig {
@@ -29,7 +30,7 @@ export function makeEtherscanV2ScanAdapter(
     // Query 1 block higher than the client's checkpoint:
     const startblock = String(Number(checkpoint) + 1)
 
-    const params = new URLSearchParams({
+    const params = {
       chainId: chainId.toString(),
       module: 'account',
       action: 'txlist',
@@ -37,48 +38,27 @@ export function makeEtherscanV2ScanAdapter(
       startblock,
       endblock: '999999999',
       sort: 'asc'
-    })
-    // Use a random API URL:
-    const url = pickRandom(urls)
-    if (url == null) {
-      logger.error('No URLs for EtherscanV2ScanAdapter provided')
-      return true
     }
-    const apiKeys = serviceKeysFromUrl(serverConfig.serviceKeys, url)
-    const apiKey = pickRandom(apiKeys)
-    if (apiKey != null) {
-      params.set('apikey', apiKey)
-    } else {
-      logger.warn({ url }, 'No API key found, proceeding without one')
-    }
-    const response = await fetchEtherscanV2(url, params)
-    if ('error' in response) {
-      logger.error(
+    const response = await fetchEtherscanV2(urls, params, logger)
+    if (!response.success) {
+      logger.warn(
         {
-          status: response.httpStatus,
-          statusText: response.httpStatusText,
+          httpStatus: response.httpStatus,
+          httpStatusText: response.httpStatusText,
           responseText: response.responseText
         },
-        'scanAddress error'
+        'scanAddress etherscanV2 txlist error'
       )
-      return true
-    }
-    let transactionData: ReturnType<typeof asResult>
-    try {
-      transactionData = asResult(response.json)
-    } catch (error) {
-      logger.error(
-        { err: error, response: String(JSON.stringify(response.json)) },
-        'scanAddress asResult cleaner error'
+      throw new Error(
+        `scanAddress etherscanV2 error: ${response.httpStatus} ${response.httpStatusText}`
       )
-      throw error
     }
-    if (transactionData.status === '1' && transactionData.result.length > 0) {
+    if (response.data.status === '1' && response.data.result.length > 0) {
       return true
     }
 
     // If no normal transactions, check for token transactions:
-    const tokenParams = new URLSearchParams({
+    const tokenParams = {
       chainId: chainId.toString(),
       module: 'account',
       action: 'tokentx',
@@ -86,28 +66,30 @@ export function makeEtherscanV2ScanAdapter(
       startblock,
       endblock: '999999999',
       sort: 'asc'
-    })
-    if (apiKey != null) {
-      tokenParams.set('apikey', apiKey)
     }
-    const tokenResponse = await fetchEtherscanV2(url, tokenParams)
-    if ('error' in tokenResponse) {
-      logger.error(
+    const tokenResponse = await fetchEtherscanV2(urls, tokenParams, logger)
+    if (!tokenResponse.success) {
+      logger.warn(
         {
-          status: tokenResponse.httpStatus,
-          statusText: tokenResponse.httpStatusText
+          httpStatus: tokenResponse.httpStatus,
+          httpStatusText: tokenResponse.httpStatusText,
+          responseText: tokenResponse.responseText
         },
-        'scanAddress tokenTx error'
+        'scanAddress etherscanV2 tokenTx error'
       )
-      return false
+      throw new Error(
+        `scanAddress etherscanV2 tokenTx error: ${tokenResponse.httpStatus} ${tokenResponse.httpStatusText}`
+      )
     }
-    const tokenData = asResult(tokenResponse.json)
-    if (tokenData.status === '1' && tokenData.result.length > 0) {
+    if (
+      tokenResponse.data.status === '1' &&
+      tokenResponse.data.result.length > 0
+    ) {
       return true
     }
 
     // If no normal transactions, check for internal transactions:
-    const internalParams = new URLSearchParams({
+    const internalParams = {
       chainId: chainId.toString(),
       module: 'account',
       action: 'txlistinternal',
@@ -115,32 +97,29 @@ export function makeEtherscanV2ScanAdapter(
       startblock,
       endblock: '999999999',
       sort: 'asc'
-    })
-    if (apiKey != null) {
-      internalParams.set('apikey', apiKey)
     }
-    const internalResponse = await fetchEtherscanV2(url, internalParams)
-    if ('error' in internalResponse) {
-      logger.error(
+    const internalResponse = await fetchEtherscanV2(
+      urls,
+      internalParams,
+      logger
+    )
+    if (!internalResponse.success) {
+      logger.warn(
         {
-          status: internalResponse.httpStatus,
-          statusText: internalResponse.httpStatusText
+          httpStatus: internalResponse.httpStatus,
+          httpStatusText: internalResponse.httpStatusText,
+          responseText: internalResponse.responseText
         },
-        'scanAddress internalTx error'
+        'scanAddress etherscanV2 internalTx error'
       )
-      return false
-    }
-    let internalData: ReturnType<typeof asResult>
-    try {
-      internalData = asResult(internalResponse.json)
-    } catch (error) {
-      logger.error(
-        { err: error, response: String(JSON.stringify(internalResponse.json)) },
-        'scanAddress asResult cleaner error'
+      throw new Error(
+        `scanAddress etherscanV2 internalTx error: ${internalResponse.httpStatus} ${internalResponse.httpStatusText}`
       )
-      throw error
     }
-    if (internalData.status === '1' && internalData.result.length > 0) {
+    if (
+      internalResponse.data.status === '1' &&
+      internalResponse.data.result.length > 0
+    ) {
       return true
     }
 
@@ -148,41 +127,90 @@ export function makeEtherscanV2ScanAdapter(
   }
 }
 
-const asResult = asObject({
-  status: asString,
-  result: asArray(asUnknown)
-})
+const asEtherscanV2Result = asJSON(
+  asObject({
+    status: asString,
+    result: asArray(asUnknown)
+  })
+)
 
-type EtherscanResult =
+type EtherscanV2Result = ReturnType<typeof asEtherscanV2Result>
+
+type EtherscanResponse =
   | {
-      json: unknown
+      success: true
+      data: EtherscanV2Result
       httpStatus: number
     }
   | {
-      error: boolean
+      success: false
       httpStatus: number
       httpStatusText: string
       responseText: string
     }
 
+const rateLimitStrings = [
+  'Max calls per sec rate',
+  'ETIMEDOUT',
+  'RateLimitExceeded'
+]
+const maxRetries = 10
+const retryDelay = 3000
+
 async function fetchEtherscanV2(
-  url: string,
-  params: URLSearchParams
-): Promise<EtherscanResult> {
-  const response = await fetch(`${url}/v2/api?${params.toString()}`)
-  if (response.status !== 200) {
-    const text = await response.text().catch(() => '')
+  urls: string[],
+  params: Record<string, string>,
+  logger: Logger
+): Promise<EtherscanResponse> {
+  let retries = 0
+
+  while (retries++ < maxRetries) {
+    // Use a random API URL:
+    const url = pickRandom(urls)
+    if (url == null) {
+      throw new Error('No URLs for EtherscanV2ScanAdapter provided')
+    }
+    const searchParams = new URLSearchParams(params)
+
+    // Use a random API key:
+    const apiKeys = serviceKeysFromUrl(serverConfig.serviceKeys, url)
+    const apiKey = apiKeys == null ? undefined : pickRandom(apiKeys)
+    if (apiKey != null) {
+      searchParams.set('apikey', apiKey)
+    }
+
+    const response = await fetch(`${url}/v2/api?${searchParams.toString()}`)
+    const text = await response.text()
+    if (response.status !== 200) {
+      return {
+        success: false,
+        httpStatus: response.status,
+        httpStatusText: response.statusText,
+        responseText: text
+      }
+    }
+
+    if (rateLimitStrings.some(str => text.includes(str))) {
+      logger.warn(
+        {
+          func: 'fetchEtherscanV2',
+          response: text
+        },
+        'Rate limit exceeded, retrying...'
+      )
+      await snooze(retryDelay * retries)
+      continue
+    }
+
+    // Parse and clean the response (let cleaner throw if invalid)
+    const data = asEtherscanV2Result(text)
+
     return {
-      error: true,
-      httpStatus: response.status,
-      httpStatusText: response.statusText,
-      responseText: text
+      success: true,
+      data,
+      httpStatus: response.status
     }
   }
 
-  const json = await response.json()
-  return {
-    json,
-    httpStatus: response.status
-  }
+  throw new Error('Failed to fetch EtherscanV2 data after max retries')
 }
