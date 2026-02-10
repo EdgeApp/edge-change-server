@@ -1,29 +1,28 @@
-import { makeBlockbook } from './blockbook'
 import { makeEvmRpc } from './evmRpc'
 import { makeFakePlugin } from './fakePlugin'
 
 export const allPlugins = [
   // Bitcoin family:
-  makeBlockbook({
-    pluginId: 'bitcoin',
-    url: 'wss://btcbook.nownodes.io/wss/{{apiKey}}'
-  }),
-  makeBlockbook({
-    pluginId: 'bitcoincash',
-    url: 'wss://bchbook.nownodes.io/wss/{{apiKey}}'
-  }),
-  makeBlockbook({
-    pluginId: 'dogecoin',
-    url: 'wss://dogebook.nownodes.io/wss/{{apiKey}}'
-  }),
-  makeBlockbook({
-    pluginId: 'litecoin',
-    url: 'wss://ltcbook.nownodes.io/wss/{{apiKey}}'
-  }),
-  makeBlockbook({
-    pluginId: 'qtum',
-    url: 'wss://qtum-blockbook.nownodes.io/wss/{{apiKey}}'
-  }),
+  // makeBlockbook({
+  //   pluginId: 'bitcoin',
+  //   url: 'wss://btcbook.nownodes.io/wss/{{apiKey}}'
+  // }),
+  // makeBlockbook({
+  //   pluginId: 'bitcoincash',
+  //   url: 'wss://bchbook.nownodes.io/wss/{{apiKey}}'
+  // }),
+  // makeBlockbook({
+  //   pluginId: 'dogecoin',
+  //   url: 'wss://dogebook.nownodes.io/wss/{{apiKey}}'
+  // }),
+  // makeBlockbook({
+  //   pluginId: 'litecoin',
+  //   url: 'wss://ltcbook.nownodes.io/wss/{{apiKey}}'
+  // }),
+  // makeBlockbook({
+  //   pluginId: 'qtum',
+  //   url: 'wss://qtum-blockbook.nownodes.io/wss/{{apiKey}}'
+  // }),
 
   makeEvmRpc({
     pluginId: 'botanix',
