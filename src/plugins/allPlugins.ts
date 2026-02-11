@@ -42,6 +42,13 @@ export function makeAllPlugins(opts: AllPluginOptions): AddressPlugin[] {
 
     // EVM chains using EvmRpc polling (not supported by Alchemy):
     makeEvmRpc({
+      pluginId: 'bobevm',
+      urls: ['https://rpc.gobob.xyz'],
+      scanAdapters: [
+        { type: 'etherscan-v1', urls: ['https://explorer.gobob.xyz'] }
+      ]
+    }),
+    makeEvmRpc({
       pluginId: 'botanix',
       urls: ['https://rpc.ankr.com/botanix_mainnet'],
       scanAdapters: [
@@ -50,6 +57,67 @@ export function makeAllPlugins(opts: AllPluginOptions): AddressPlugin[] {
           urls: [
             'https://api.routescan.io/v2/network/mainnet/evm/3637/etherscan'
           ]
+        }
+      ]
+    }),
+    makeEvmRpc({
+      pluginId: 'ethereumclassic',
+      urls: [
+        'https://0xrpc.io/etc',
+        'https://etc.rivet.link',
+        'https://ethereum-classic-mainnet.gateway.tatum.io'
+      ],
+      scanAdapters: [
+        { type: 'etherscan-v1', urls: ['https://etc.blockscout.com'] }
+      ]
+    }),
+    makeEvmRpc({
+      pluginId: 'ethereumpow',
+      urls: ['https://mainnet.ethereumpow.org'],
+      scanAdapters: []
+    }),
+    makeEvmRpc({
+      pluginId: 'filecoinfevm',
+      urls: [
+        'https://filecoin.chainup.net/rpc/v1',
+        'https://rpc.ankr.com/filecoin'
+      ],
+      scanAdapters: []
+    }),
+    makeEvmRpc({
+      pluginId: 'hyperevm',
+      urls: ['https://rpc.hyperliquid.xyz/evm'],
+      scanAdapters: [
+        {
+          type: 'etherscan-v1',
+          urls: [
+            'https://api.routescan.io/v2/network/mainnet/evm/999/etherscan'
+          ]
+        }
+      ]
+    }),
+    makeEvmRpc({
+      pluginId: 'pulsechain',
+      urls: [
+        'https://pulsechain-rpc.publicnode.com',
+        'https://rpc.pulsechainrpc.com',
+        'https://rpc.pulsechainstats.com'
+      ],
+      scanAdapters: [
+        { type: 'etherscan-v1', urls: ['https://api.scan.pulsechain.com'] }
+      ]
+    }),
+    makeEvmRpc({
+      pluginId: 'telos',
+      urls: [
+        'https://rpc.telos.net',
+        'https://telos.drpc.org',
+        'https://mainnet.telos.net/evm'
+      ],
+      scanAdapters: [
+        {
+          type: 'etherscan-v1',
+          urls: ['https://api.teloscan.io']
         }
       ]
     }),
