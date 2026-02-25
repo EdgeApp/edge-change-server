@@ -1,19 +1,29 @@
 import cluster from 'cluster'
 import http from 'http'
 import { AggregatorRegistry } from 'prom-client'
-import WebSocket from 'ws'
 
-import { makeAddressHub } from './hub'
 import { serverConfig } from './serverConfig'
+import { makeAlchemyNotifyApi } from './util/alchemyNotifyApi'
 import { makeLogger } from './util/logger'
+import { makeSigningKeyStore } from './util/signingKeyStore'
+import { makeWebhookRegistry } from './util/webhookRegistry'
+import { startWorker } from './worker'
 
-const logger = makeLogger('server')
+const logger = makeLogger('master-process')
 
 const aggregatorRegistry = new AggregatorRegistry()
 
-async function main(): Promise<void> {
-  if (cluster.isPrimary) manageServers()
-  else await server()
+function main(): void {
+  if (cluster.isPrimary) {
+    manageServers()
+  } else {
+    // Create services for this worker process
+    const notifyApi = makeAlchemyNotifyApi()
+    const signingKeyStore = makeSigningKeyStore({ notifyApi })
+    const webhookRegistry = makeWebhookRegistry()
+
+    startWorker({ notifyApi, signingKeyStore, webhookRegistry })
+  }
 }
 
 function manageServers(): void {
@@ -31,8 +41,25 @@ function manageServers(): void {
     cluster.fork()
   })
 
+  // Relay webhook activity broadcasts between workers so every worker
+  // can match incoming activity against its own subscribedAddresses map:
+  cluster.on('message', (sender, message) => {
+    if (
+      message != null &&
+      typeof message === 'object' &&
+      (message as { type?: string }).type === 'webhook-activity'
+    ) {
+      for (const id in cluster.workers) {
+        const worker = cluster.workers[id]
+        if (worker != null && worker !== sender) {
+          worker.send(message)
+        }
+      }
+    }
+  })
+
   // Set up a Prometheus-compatible metrics server:
-  const httpServer = http.createServer((req, res) => {
+  const metricsServer = http.createServer((req, res) => {
     aggregatorRegistry
       .clusterMetrics()
       .then(metrics => {
@@ -46,59 +73,8 @@ function manageServers(): void {
         res.end(`Could not generate metrics: ${String(error)}`)
       })
   })
-  httpServer.listen(metricsPort, metricsHost)
+  metricsServer.listen(metricsPort, metricsHost)
   logger.info({ port: metricsPort }, 'metrics server listening')
 }
 
-async function server(): Promise<void> {
-  const { allPlugins } = await import('./plugins/allPlugins')
-  const { listenPort, listenHost } = serverConfig
-
-  const wss = new WebSocket.Server({
-    port: listenPort,
-    host: listenHost
-  })
-  logger.info({ port: listenPort }, 'websocket server listening')
-
-  const hub = makeAddressHub({ plugins: allPlugins })
-  wss.on('connection', (ws, req) => {
-    // Extract IP from X-Forwarded-For header (if behind proxy) or socket
-    const forwardedFor = req.headers['x-forwarded-for']
-    const ip =
-      (typeof forwardedFor === 'string'
-        ? forwardedFor.split(',')[0].trim()
-        : undefined) ??
-      req.socket.remoteAddress ??
-      'unknown'
-    hub.handleConnection(ws, ip)
-  })
-
-  // Graceful shutdown handler
-  const shutdown = (): void => {
-    logger.info({ pid: process.pid }, 'shutting down')
-
-    // Stop accepting new connections
-    wss.close(() => {
-      logger.info({ pid: process.pid }, 'websocket server closed')
-    })
-
-    // Close all existing client connections
-    for (const client of wss.clients) {
-      client.close(1001, 'Server shutting down')
-    }
-
-    // Clean up plugin resources (timers, WebSocket connections, etc.)
-    hub.destroy()
-
-    logger.info({ pid: process.pid }, 'cleanup complete')
-    process.exit(0)
-  }
-
-  process.on('SIGTERM', shutdown)
-  process.on('SIGINT', shutdown)
-}
-
-main().catch(error => {
-  logger.error({ err: error }, 'main error')
-  process.exit(1)
-})
+main()

@@ -32,10 +32,11 @@
     "*.html": "prettier --write"
   },
   "dependencies": {
-    "cleaner-config": "^0.1.7",
+    "cleaner-config": "^0.1.10",
     "cleaners": "^0.3.16",
     "clipanion": "^3.2.0-rc.3",
     "edge-server-tools": "^0.2.19",
+    "express": "^5.2.1",
     "node-fetch": "^2.6.0",
     "pino": "^10.2.0",
     "prom-client": "^15.1.0",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
+    "@types/express": "^5.0.6",
     "@types/node": "^20.8.5",
     "@types/node-fetch": "^2.5.3",
     "@types/ws": "^8.5.13",
