@@ -1,4 +1,5 @@
 import express, { Express } from 'express'
+import http from 'http'
 import { pickMethod, pickPath } from 'serverlet'
 import { ExpressRequest, makeExpressRoute } from 'serverlet/express'
 import WebSocket from 'ws'
@@ -42,25 +43,36 @@ export function startWorker(opts: StartWorkerOptions): void {
   const app: Express = express()
   // Use raw body parser to get the raw string for signature validation
   app.use(express.text({ type: '*/*' }))
+  app.get('/', (_req, res) => {
+    res.status(426).type('text/plain').send('Upgrade Required')
+  })
   // Mount the serverlet
   app.use(makeExpressRoute(serverlet))
 
-  const { webhookHost, webhookPort } = serverConfig
-  const webhookServer = app.listen(webhookPort, webhookHost, () => {
-    logger.info(
-      {
-        host: webhookHost,
-        port: webhookPort
-      },
-      'HTTP server listening'
-    )
+  const server = http.createServer(app)
+  const wss = new WebSocket.Server({ noServer: true })
+
+  server.on('upgrade', (req, socket, head) => {
+    const url = req.url ?? '/'
+    if (url.startsWith('/webhook')) {
+      socket.destroy()
+      return
+    }
+
+    wss.handleUpgrade(req, socket, head, ws => {
+      wss.emit('connection', ws, req)
+    })
   })
 
-  const wss = new WebSocket.Server({
-    port: listenPort,
-    host: listenHost
+  server.listen(listenPort, listenHost, () => {
+    logger.info(
+      {
+        host: listenHost,
+        port: listenPort
+      },
+      'HTTP + websocket server listening'
+    )
   })
-  logger.info({ port: listenPort }, 'websocket server listening')
 
   const allPlugins = makeAllPlugins(opts)
   const hub = makeAddressHub({ plugins: allPlugins })
@@ -93,8 +105,8 @@ export function startWorker(opts: StartWorkerOptions): void {
     // Clean up plugin resources (timers, WebSocket connections, etc.)
     hub.destroy()
 
-    webhookServer.close()
-    logger.info('HTTP server stopped')
+    server.close()
+    logger.info('HTTP + websocket server stopped')
 
     logger.info({ pid: process.pid }, 'cleanup complete')
     process.exit(0)

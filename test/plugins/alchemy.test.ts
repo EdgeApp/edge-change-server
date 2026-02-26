@@ -10,12 +10,13 @@ import crypto from 'crypto'
 import { HttpResponse } from 'serverlet'
 
 import { makeAlchemy } from '../../src/plugins/alchemy'
-import { notifyApi } from '../../src/services'
 import { AddressPlugin } from '../../src/types/addressPlugin'
+import { makeAlchemyNotifyApi } from '../../src/util/alchemyNotifyApi'
 import { SigningKeyStore } from '../../src/util/signingKeyStore'
 import { WebhookRegistry, WebhookRoute } from '../../src/util/webhookRegistry'
 
 const TEST_SIGNING_KEY = 'test-signing-key'
+const notifyApi = makeAlchemyNotifyApi()
 
 function computeSignature(body: string, key: string): string {
   return crypto.createHmac('sha256', key).update(body, 'utf8').digest('hex')
@@ -55,8 +56,6 @@ jest.mock('../../src/serverConfig', () => ({
   serverConfig: {
     publicUri: 'https://test.edge.app',
     alchemyAuthToken: 'test-auth-token',
-    webhookHost: '127.0.0.1',
-    webhookPort: 8010,
     serviceKeys: {
       'dashboard.alchemy.com': ['test-api-key']
     }
@@ -147,7 +146,8 @@ describe('Alchemy plugin', () => {
       network: 'ETH_MAINNET',
       notifyApi: notifyApi,
       signingKeyStore: mockSigningKeyStore,
-      webhookRegistry: mockWebhookRegistry
+      webhookRegistry: mockWebhookRegistry,
+      normalizeAddress: address => address.toLowerCase()
     })
   })
 
