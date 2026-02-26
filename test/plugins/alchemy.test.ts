@@ -10,12 +10,13 @@ import crypto from 'crypto'
 import { HttpResponse } from 'serverlet'
 
 import { makeAlchemy } from '../../src/plugins/alchemy'
-import { notifyApi } from '../../src/services'
 import { AddressPlugin } from '../../src/types/addressPlugin'
+import { makeAlchemyNotifyApi } from '../../src/util/alchemyNotifyApi'
 import { SigningKeyStore } from '../../src/util/signingKeyStore'
 import { WebhookRegistry, WebhookRoute } from '../../src/util/webhookRegistry'
 
 const TEST_SIGNING_KEY = 'test-signing-key'
+const notifyApi = makeAlchemyNotifyApi()
 
 function computeSignature(body: string, key: string): string {
   return crypto.createHmac('sha256', key).update(body, 'utf8').digest('hex')
@@ -55,8 +56,6 @@ jest.mock('../../src/serverConfig', () => ({
   serverConfig: {
     publicUri: 'https://test.edge.app',
     alchemyAuthToken: 'test-auth-token',
-    webhookHost: '127.0.0.1',
-    webhookPort: 8010,
     serviceKeys: {
       'dashboard.alchemy.com': ['test-api-key']
     }
@@ -147,7 +146,8 @@ describe('Alchemy plugin', () => {
       network: 'ETH_MAINNET',
       notifyApi: notifyApi,
       signingKeyStore: mockSigningKeyStore,
-      webhookRegistry: mockWebhookRegistry
+      webhookRegistry: mockWebhookRegistry,
+      normalizeAddress: address => address.toLowerCase()
     })
   })
 
@@ -485,6 +485,45 @@ describe('Alchemy plugin', () => {
       addressesToAdd: [TEST_SECOND_ADDRESS.toLowerCase()],
       addressesToRemove: undefined
     })
+  })
+
+  test('should ignore active webhook on same network with different URL', async () => {
+    plugin.destroy?.()
+    jest.clearAllMocks()
+    const getTeamWebhooksMock = notifyApi.getTeamWebhooks as jest.Mock
+    getTeamWebhooksMock.mockImplementationOnce(async () => [
+      {
+        id: 'foreign-webhook-id',
+        network: 'ETH_MAINNET',
+        webhook_type: 'ADDRESS_ACTIVITY',
+        webhook_url: 'https://other.edge.app/webhook/alchemy/ethereum',
+        is_active: true,
+        time_created: Date.now(),
+        signing_key: TEST_SIGNING_KEY,
+        version: 'V2'
+      }
+    ])
+
+    plugin = makeAlchemy({
+      pluginId: 'ethereum',
+      network: 'ETH_MAINNET',
+      notifyApi: notifyApi,
+      signingKeyStore: mockSigningKeyStore,
+      webhookRegistry: mockWebhookRegistry,
+      normalizeAddress: address => address.toLowerCase()
+    })
+
+    await plugin.subscribe(TEST_ADDRESS)
+    await jest.advanceTimersByTimeAsync(1000)
+
+    expect(notifyApi.createWebhook).toHaveBeenCalledWith({
+      network: 'ETH_MAINNET',
+      webhookUrl: 'https://test.edge.app/webhook/alchemy/ethereum',
+      addresses: [TEST_ADDRESS_LOWERCASE]
+    })
+    expect(notifyApi.deleteWebhook).not.toHaveBeenCalledWith(
+      'foreign-webhook-id'
+    )
   })
 
   // --- Signature validation tests ---

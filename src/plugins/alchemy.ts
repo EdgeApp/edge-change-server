@@ -108,13 +108,17 @@ export function makeAlchemy(opts: AlchemyOptions): AddressPlugin {
       const webhooks = await teamWebhooksPromise
       const expectedUrl = `${serverConfig.publicUri}/webhook/${WEBHOOK_KEY}`
 
-      // Find webhooks for this network
-      const networkWebhooks = webhooks.filter(
+      // Only manage webhooks owned by this server endpoint.
+      // In shared Alchemy accounts, other change-server instances may
+      // manage webhooks for the same network using different URLs.
+      const managedNetworkWebhooks = webhooks.filter(
         (w: WebhookInfo) =>
-          w.network === network && w.webhook_type === 'ADDRESS_ACTIVITY'
+          w.network === network &&
+          w.webhook_type === 'ADDRESS_ACTIVITY' &&
+          w.webhook_url === expectedUrl
       )
 
-      for (const webhook of networkWebhooks) {
+      for (const webhook of managedNetworkWebhooks) {
         if (!webhook.is_active) {
           // Delete paused webhooks
           logger.info({
@@ -135,34 +139,12 @@ export function makeAlchemy(opts: AlchemyOptions): AddressPlugin {
           webhookId = webhook.id
           signingKeyStore.setSigningKey(webhook.id, webhook.signing_key)
 
-          // Update URL if different
-          if (webhook.webhook_url !== expectedUrl) {
-            logger.info({
-              webhookId: webhook.id,
-              oldUrl: webhook.webhook_url,
-              newUrl: expectedUrl,
-              msg: 'Updating webhook URL'
-            })
-            try {
-              await notifyApi.updateWebhook({
-                webhookId: webhook.id,
-                webhookUrl: expectedUrl
-              })
-            } catch (err) {
-              logger.error({
-                err,
-                webhookId: webhook.id,
-                msg: 'Failed to update webhook URL'
-              })
-            }
-          }
-
           logger.info({
             webhookId: webhook.id,
             msg: 'Reusing existing webhook'
           })
         } else {
-          // Delete extra active webhooks (we only need one per network)
+          // Delete extra active webhooks for this server endpoint
           logger.info({
             webhookId: webhook.id,
             msg: 'Deleting extra webhook'
