@@ -487,6 +487,45 @@ describe('Alchemy plugin', () => {
     })
   })
 
+  test('should ignore active webhook on same network with different URL', async () => {
+    plugin.destroy?.()
+    jest.clearAllMocks()
+    const getTeamWebhooksMock = notifyApi.getTeamWebhooks as jest.Mock
+    getTeamWebhooksMock.mockImplementationOnce(async () => [
+      {
+        id: 'foreign-webhook-id',
+        network: 'ETH_MAINNET',
+        webhook_type: 'ADDRESS_ACTIVITY',
+        webhook_url: 'https://other.edge.app/webhook/alchemy/ethereum',
+        is_active: true,
+        time_created: Date.now(),
+        signing_key: TEST_SIGNING_KEY,
+        version: 'V2'
+      }
+    ])
+
+    plugin = makeAlchemy({
+      pluginId: 'ethereum',
+      network: 'ETH_MAINNET',
+      notifyApi: notifyApi,
+      signingKeyStore: mockSigningKeyStore,
+      webhookRegistry: mockWebhookRegistry,
+      normalizeAddress: address => address.toLowerCase()
+    })
+
+    await plugin.subscribe(TEST_ADDRESS)
+    await jest.advanceTimersByTimeAsync(1000)
+
+    expect(notifyApi.createWebhook).toHaveBeenCalledWith({
+      network: 'ETH_MAINNET',
+      webhookUrl: 'https://test.edge.app/webhook/alchemy/ethereum',
+      addresses: [TEST_ADDRESS_LOWERCASE]
+    })
+    expect(notifyApi.deleteWebhook).not.toHaveBeenCalledWith(
+      'foreign-webhook-id'
+    )
+  })
+
   // --- Signature validation tests ---
 
   test('missing signature header should return 401', async () => {
