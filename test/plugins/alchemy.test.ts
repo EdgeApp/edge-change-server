@@ -9,7 +9,10 @@ import {
 import crypto from 'crypto'
 import { HttpResponse } from 'serverlet'
 
-import { makeAlchemy } from '../../src/plugins/alchemy'
+import {
+  makeAlchemy,
+  resetAlchemyTeamWebhooksCache
+} from '../../src/plugins/alchemy'
 import { AddressPlugin } from '../../src/types/addressPlugin'
 import { makeAlchemyNotifyApi } from '../../src/util/alchemyNotifyApi'
 import { SigningKeyStore } from '../../src/util/signingKeyStore'
@@ -123,6 +126,7 @@ describe('Alchemy plugin', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     jest.useFakeTimers()
+    resetAlchemyTeamWebhooksCache()
     registeredHandler = null
 
     // Create mock signing key store
@@ -485,6 +489,46 @@ describe('Alchemy plugin', () => {
       addressesToAdd: [TEST_SECOND_ADDRESS.toLowerCase()],
       addressesToRemove: undefined
     })
+  })
+
+  test('should ignore active webhook on same network with different URL', async () => {
+    plugin.destroy?.()
+    jest.clearAllMocks()
+    resetAlchemyTeamWebhooksCache()
+    const getTeamWebhooksMock = notifyApi.getTeamWebhooks as jest.Mock
+    getTeamWebhooksMock.mockImplementationOnce(async () => [
+      {
+        id: 'foreign-webhook-id',
+        network: 'ETH_MAINNET',
+        webhook_type: 'ADDRESS_ACTIVITY',
+        webhook_url: 'https://other.edge.app/webhook/alchemy/ethereum',
+        is_active: true,
+        time_created: Date.now(),
+        signing_key: TEST_SIGNING_KEY,
+        version: 'V2'
+      }
+    ])
+
+    plugin = makeAlchemy({
+      pluginId: 'ethereum',
+      network: 'ETH_MAINNET',
+      notifyApi: notifyApi,
+      signingKeyStore: mockSigningKeyStore,
+      webhookRegistry: mockWebhookRegistry,
+      normalizeAddress: address => address.toLowerCase()
+    })
+
+    await plugin.subscribe(TEST_ADDRESS)
+    await jest.advanceTimersByTimeAsync(1000)
+
+    expect(notifyApi.createWebhook).toHaveBeenCalledWith({
+      network: 'ETH_MAINNET',
+      webhookUrl: 'https://test.edge.app/webhook/alchemy/ethereum',
+      addresses: [TEST_ADDRESS_LOWERCASE]
+    })
+    expect(notifyApi.deleteWebhook).not.toHaveBeenCalledWith(
+      'foreign-webhook-id'
+    )
   })
 
   // --- Signature validation tests ---
