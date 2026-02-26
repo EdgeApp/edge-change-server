@@ -1,3 +1,4 @@
+import { serverConfig } from '../serverConfig'
 import { AlchemyNotifyApi } from './alchemyNotifyApi'
 import { Logger, makeLogger } from './logger'
 
@@ -36,14 +37,19 @@ export function makeSigningKeyStore(
   async function doRecover(): Promise<void> {
     logger.info({ msg: 'Recovering signing keys from Alchemy API' })
     const webhooks = await notifyApi.getTeamWebhooks()
+    const webhookPrefix = `${serverConfig.publicUri}/webhook/`
+    let recoveredCount = 0
 
     for (const webhook of webhooks) {
+      // Only trust webhook IDs owned by this server endpoint.
+      if (!webhook.webhook_url.startsWith(webhookPrefix)) continue
       signingKeys.set(webhook.id, webhook.signing_key)
+      recoveredCount++
     }
 
     hasRecovered = true
     logger.info({
-      count: webhooks.length,
+      count: recoveredCount,
       msg: 'Recovered signing keys'
     })
   }
