@@ -19,7 +19,6 @@ import { SigningKeyStore } from '../../src/util/signingKeyStore'
 import { WebhookRegistry, WebhookRoute } from '../../src/util/webhookRegistry'
 
 const TEST_SIGNING_KEY = 'test-signing-key'
-const notifyApi = makeAlchemyNotifyApi()
 
 function computeSignature(body: string, key: string): string {
   return crypto.createHmac('sha256', key).update(body, 'utf8').digest('hex')
@@ -71,6 +70,7 @@ describe('Alchemy plugin', () => {
   const TEST_SECOND_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F'
 
   let plugin: AddressPlugin
+  let notifyApi: ReturnType<typeof makeAlchemyNotifyApi>
   let mockSigningKeyStore: SigningKeyStore
   let mockWebhookRegistry: WebhookRegistry
   let registeredHandler: WebhookRoute | null = null
@@ -145,10 +145,12 @@ describe('Alchemy plugin', () => {
       handleWebhook: jest.fn(async () => ({ status: 200, body: 'OK' }))
     }
 
+    notifyApi = makeAlchemyNotifyApi()
+
     plugin = makeAlchemy({
       pluginId: 'ethereum',
       network: 'ETH_MAINNET',
-      notifyApi: notifyApi,
+      notifyApi,
       signingKeyStore: mockSigningKeyStore,
       webhookRegistry: mockWebhookRegistry,
       normalizeAddress: address => address.toLowerCase()
