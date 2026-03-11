@@ -12,6 +12,7 @@ import {
   ScanAdapter,
   ScanAdapterConfig
 } from '../util/scanAdapters/scanAdapterTypes'
+import { makeTatumScanAdapter } from '../util/scanAdapters/TatumScanAdapter'
 import { shuffleArray } from '../util/shuffleArray'
 import { snooze } from '../util/snooze'
 
@@ -293,5 +294,7 @@ function getScanAdapter(
       return makeEtherscanV1ScanAdapter(scanAdapterConfig, logger)
     case 'etherscan-v2':
       return makeEtherscanV2ScanAdapter(scanAdapterConfig, logger)
+    case 'tatum':
+      return makeTatumScanAdapter(scanAdapterConfig, logger)
   }
 }

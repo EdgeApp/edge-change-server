@@ -22,6 +22,12 @@ const asServerConfig = asObject({
   // Alchemy webhook:
   alchemyAuthToken: asOptional(asString, ''),
 
+  // Tatum webhook HMAC secret.
+  // When set, Tatum will sign each webhook delivery with this secret and
+  // the server will verify the X-Tatum-Signature header on every request.
+  // Leave empty to skip signature verification (development only).
+  tatumHmacSecret: asOptional(asString, ''),
+
   // Resources:
   serviceKeys: asOptional(asServiceKeys, () => ({
     '<service-host>': ['<api-key>']
