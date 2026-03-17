@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.0 (2026-03-16)
+
 - added: Added flexible service key matching with URL templating.
 - added: Alchemy plugin for EVM networks and Solana.
 - changed: Migrated to JSON-based logs using Pino library.
