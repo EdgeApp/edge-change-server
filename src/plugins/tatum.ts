@@ -48,6 +48,7 @@ import { serverConfig } from '../serverConfig'
 import { AddressPlugin, PluginEvents } from '../types/addressPlugin'
 import { makeLogger } from '../util/logger'
 import { pickRandom } from '../util/pickRandom'
+import { asTatumTransactionsResponse } from '../util/scanAdapters/TatumScanAdapter'
 import { serviceKeysFromUrl } from '../util/serviceKeys'
 import { snooze } from '../util/snooze'
 import { WebhookRegistry, WebhookRoute } from '../util/webhookRegistry'
@@ -781,19 +782,6 @@ function parseTatumErrorBody(text: string): TatumErrorResponse | undefined {
 }
 
 type TatumErrorResponse = ReturnType<typeof asTatumErrorResponse>
-
-const asTatumTransactionsResponse = asJSON(
-  asObject({
-    result: asArray(
-      asObject({
-        blockNumber: asNumber,
-        hash: asString
-      })
-    ),
-    prevPage: asOptional(asString),
-    nextPage: asOptional(asString)
-  })
-)
 
 /**
  * Tatum ADDRESS_EVENT webhook payload.

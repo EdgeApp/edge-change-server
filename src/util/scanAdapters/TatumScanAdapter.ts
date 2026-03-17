@@ -1,4 +1,11 @@
-import { asArray, asJSON, asNumber, asObject, asString } from 'cleaners'
+import {
+  asArray,
+  asJSON,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 
 import { serverConfig } from '../../serverConfig'
 import { Logger } from '../logger'
@@ -43,7 +50,7 @@ export function makeTatumScanAdapter(
   }
 }
 
-const asTatumTransactionsResponse = asJSON(
+export const asTatumTransactionsResponse = asJSON(
   asObject({
     result: asArray(
       asObject({
@@ -51,8 +58,8 @@ const asTatumTransactionsResponse = asJSON(
         hash: asString
       })
     ),
-    prevPage: asString,
-    nextPage: asString
+    prevPage: asOptional(asString),
+    nextPage: asOptional(asString)
   })
 )
 
