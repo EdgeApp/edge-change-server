@@ -3,6 +3,7 @@ import { AlchemyNotifyApi } from '../util/alchemyNotifyApi'
 import { SigningKeyStore } from '../util/signingKeyStore'
 import { WebhookRegistry } from '../util/webhookRegistry'
 import { makeAlchemy } from './alchemy'
+import { makeCosmosWs } from './cosmosWs'
 import { makeEvmRpc } from './evmRpc'
 import { makeFakePlugin } from './fakePlugin'
 
@@ -234,6 +235,66 @@ export function makeAllPlugins(opts: AllPluginOptions): AddressPlugin[] {
       signingKeyStore,
       webhookRegistry,
       normalizeAddress: evmNormalizeAddress
+    }),
+
+    // Cosmos SDK chains via Tendermint WebSocket:
+    makeCosmosWs({
+      pluginId: 'axelar',
+      wsUrl: 'wss://axelar.tendermintrpc.lava.build/websocket'
+    }),
+    makeCosmosWs({
+      pluginId: 'coreum',
+      wsUrl: 'wss://full-node.mainnet-1.coreum.dev:26657/websocket'
+    }),
+    makeCosmosWs({
+      pluginId: 'cosmoshub',
+      wsUrl: 'wss://cosmos-rpc.publicnode.com:443/websocket'
+    }),
+    makeCosmosWs({
+      pluginId: 'mayachain',
+      wsUrl: 'wss://tendermint.mayachain.info/websocket'
+    }),
+    makeCosmosWs({
+      pluginId: 'nym',
+      wsUrl: 'wss://rpc.nymtech.net:443/websocket'
+    }),
+    makeCosmosWs({
+      pluginId: 'osmosis',
+      wsUrl: 'wss://rpc.osmosis.zone:443/websocket'
+    }),
+    makeCosmosWs({
+      pluginId: 'thorchainrune',
+      wsUrl: 'wss://rpc.ninerealms.com/websocket'
+    }),
+
+    // Cosmos SDK chains (Tendermint/CometBFT WebSocket):
+    makeCosmosWs({
+      pluginId: 'axelar',
+      wsUrl: 'https://axelar.tendermintrpc.lava.build'
+    }),
+    makeCosmosWs({
+      pluginId: 'coreum',
+      wsUrl: 'https://full-node.mainnet-1.coreum.dev:26657'
+    }),
+    makeCosmosWs({
+      pluginId: 'cosmoshub',
+      wsUrl: 'https://cosmos-rpc.publicnode.com:443'
+    }),
+    makeCosmosWs({
+      pluginId: 'mayachain',
+      wsUrl: 'https://tendermint.mayachain.info'
+    }),
+    makeCosmosWs({
+      pluginId: 'nym',
+      wsUrl: 'https://rpc.nymtech.net:443'
+    }),
+    makeCosmosWs({
+      pluginId: 'osmosis',
+      wsUrl: 'https://rpc.osmosis.zone:443'
+    }),
+    makeCosmosWs({
+      pluginId: 'thorchainrune',
+      wsUrl: 'https://rpc.ninerealms.com'
     }),
 
     // Testing:
