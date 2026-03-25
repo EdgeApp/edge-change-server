@@ -9,11 +9,7 @@ import {
 import crypto from 'crypto'
 import { HttpResponse } from 'serverlet'
 
-import {
-  makeTatum,
-  TATUM_PLUGIN_IDS,
-  tatumChainMap
-} from '../../src/plugins/tatum'
+import { makeTatum, tatumChainMap } from '../../src/plugins/tatum'
 import { AddressPlugin } from '../../src/types/addressPlugin'
 import { WebhookRegistry, WebhookRoute } from '../../src/util/webhookRegistry'
 
@@ -751,12 +747,19 @@ describe('tatumChainMap', () => {
     expect(Object.keys(tatumChainMap)).toHaveLength(7)
   })
 
-  test('TATUM_PLUGIN_IDS matches tatumChainMap keys', () => {
-    const mapKeys = Object.keys(tatumChainMap).sort((a, b) =>
+  test('tatumChainMap contains expected plugin IDs', () => {
+    const pluginIds = Object.keys(tatumChainMap).sort((a, b) =>
       a.localeCompare(b)
     )
-    const idsKeys = [...TATUM_PLUGIN_IDS].sort((a, b) => a.localeCompare(b))
-    expect(idsKeys).toEqual(mapKeys)
+    expect(pluginIds).toEqual([
+      'bitcoin',
+      'bitcoincash',
+      'dogecoin',
+      'litecoin',
+      'ripple',
+      'tezos',
+      'tron'
+    ])
   })
 
   test.each([

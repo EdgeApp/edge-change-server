@@ -83,9 +83,6 @@ export const tatumChainMap: Readonly<Record<string, string>> = {
   tron: 'tron-mainnet'
 }
 
-/** All plugin IDs managed by Tatum. */
-export const TATUM_PLUGIN_IDS: readonly string[] = Object.keys(tatumChainMap)
-
 /** Max retries for outbound Tatum API calls (subscription create/delete). */
 const MAX_API_RETRIES = 5
 
