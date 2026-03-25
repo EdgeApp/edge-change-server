@@ -17,11 +17,13 @@
  *   - When no secret is configured verification is skipped (dev/test mode).
  *
  * ## Idempotency
- * Tatum delivers webhooks with at-least-once semantics. Each event payload
- * includes a `txId` field used as the idempotency key. Already-seen `txId`
- * values are tracked in a bounded LRU-like Set (`processedTxIds`). Duplicate
- * deliveries return HTTP 200 immediately without re-emitting the update event.
- * The set is capped at `MAX_PROCESSED_IDS` entries to bound memory usage.
+ * Tatum delivers webhooks with at-least-once semantics. The composite key
+ * `txId:address` is used for idempotency so that the same transaction
+ * correctly triggers updates for every subscribed address it touches while
+ * still deduplicating retries. Already-seen keys are tracked in a bounded
+ * LRU-like Set (`processedKeys`). Duplicate deliveries return HTTP 200
+ * immediately without re-emitting the update event. The set is capped at
+ * `MAX_PROCESSED_IDS` entries to bound memory usage.
  *
  * ## Retry / backoff for subscription API calls
  * Calls to `createSubscription` and `deleteSubscription` retry on transient
@@ -141,9 +143,9 @@ export function makeTatum(opts: TatumOptions): AddressPlugin {
   // address (normalized) → Tatum subscriptionId
   const subscriptions = new Map<string, string>()
 
-  // Idempotency: set of already-processed txIds.
+  // Idempotency: set of already-processed keys (txId:address).
   // When MAX_PROCESSED_IDS is reached the oldest half is dropped.
-  const processedTxIds = new Set<string>()
+  const processedKeys = new Set<string>()
 
   // Whether we've initialized (discovered existing subscriptions).
   let initialized = false
@@ -384,20 +386,20 @@ export function makeTatum(opts: TatumOptions): AddressPlugin {
   }
 
   /**
-   * Record a txId as processed, evicting the oldest half of entries when
-   * the set reaches MAX_PROCESSED_IDS to keep memory bounded.
+   * Record an idempotency key as processed, evicting the oldest half of
+   * entries when the set reaches MAX_PROCESSED_IDS to keep memory bounded.
    */
-  function markProcessed(txId: string): void {
-    if (processedTxIds.size >= MAX_PROCESSED_IDS) {
+  function markProcessed(key: string): void {
+    if (processedKeys.size >= MAX_PROCESSED_IDS) {
       // Evict oldest half (Set iteration preserves insertion order)
       const evictCount = Math.floor(MAX_PROCESSED_IDS / 2)
       let i = 0
-      for (const id of processedTxIds) {
+      for (const id of processedKeys) {
         if (i++ >= evictCount) break
-        processedTxIds.delete(id)
+        processedKeys.delete(id)
       }
     }
-    processedTxIds.add(txId)
+    processedKeys.add(key)
   }
 
   /**
@@ -673,9 +675,12 @@ export function makeTatum(opts: TatumOptions): AddressPlugin {
     }
 
     // --- Idempotency ---
+    // Key on txId + address so the same tx touching two subscribed
+    // addresses is processed for each address independently.
+    const normalizedAddress = normalizeAddress(payload.address)
     if (payload.txId != null) {
-      if (processedTxIds.has(payload.txId)) {
-        // Already processed — return 200 without re-emitting
+      const idempotencyKey = `${payload.txId}:${normalizedAddress}`
+      if (processedKeys.has(idempotencyKey)) {
         logger.info(
           { txId: payload.txId, pluginId },
           'Duplicate webhook delivery, ignoring'
@@ -686,11 +691,10 @@ export function makeTatum(opts: TatumOptions): AddressPlugin {
           body: 'OK'
         }
       }
-      markProcessed(payload.txId)
+      markProcessed(idempotencyKey)
     }
 
     // --- Emit update for tracked address ---
-    const normalizedAddress = normalizeAddress(payload.address)
     if (subscriptions.has(normalizedAddress)) {
       emit('update', {
         address: normalizedAddress,
@@ -764,7 +768,7 @@ export function makeTatum(opts: TatumOptions): AddressPlugin {
       webhookRegistry.unregisterHandler(WEBHOOK_KEY, webhookRoute)
 
       subscriptions.clear()
-      processedTxIds.clear()
+      processedKeys.clear()
     }
   }
 
