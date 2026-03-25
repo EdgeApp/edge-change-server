@@ -5,6 +5,7 @@ import { WebhookRegistry } from '../util/webhookRegistry'
 import { makeAlchemy } from './alchemy'
 import { makeEvmRpc } from './evmRpc'
 import { makeFakePlugin } from './fakePlugin'
+import { makeTatum, tatumChainMap } from './tatum'
 
 interface AllPluginOptions {
   notifyApi: AlchemyNotifyApi
@@ -13,32 +14,58 @@ interface AllPluginOptions {
 }
 
 const evmNormalizeAddress = (addr: string): string => addr.toLowerCase()
+const identityNormalizeAddress = (addr: string): string => addr
 
 export function makeAllPlugins(opts: AllPluginOptions): AddressPlugin[] {
   const { notifyApi, signingKeyStore, webhookRegistry } = opts
 
   return [
-    // Bitcoin family:
-    // makeBlockbook({
-    //   pluginId: 'bitcoin',
-    //   url: 'wss://btcbook.nownodes.io/wss/{{apiKey}}'
-    // }),
-    // makeBlockbook({
-    //   pluginId: 'bitcoincash',
-    //   url: 'wss://bchbook.nownodes.io/wss/{{apiKey}}'
-    // }),
-    // makeBlockbook({
-    //   pluginId: 'dogecoin',
-    //   url: 'wss://dogebook.nownodes.io/wss/{{apiKey}}'
-    // }),
-    // makeBlockbook({
-    //   pluginId: 'litecoin',
-    //   url: 'wss://ltcbook.nownodes.io/wss/{{apiKey}}'
-    // }),
-    // makeBlockbook({
-    //   pluginId: 'qtum',
-    //   url: 'wss://qtum-blockbook.nownodes.io/wss/{{apiKey}}'
-    // }),
+    // -------------------------------------------------------------------------
+    // Tatum ADDRESS_EVENT webhook plugins (7 blockchains)
+    // See src/plugins/tatum.ts for chain identifier reference.
+    // -------------------------------------------------------------------------
+    makeTatum({
+      pluginId: 'bitcoin',
+      chain: tatumChainMap.bitcoin,
+      webhookRegistry,
+      normalizeAddress: identityNormalizeAddress
+    }),
+    makeTatum({
+      pluginId: 'bitcoincash',
+      chain: tatumChainMap.bitcoincash,
+      webhookRegistry,
+      normalizeAddress: identityNormalizeAddress
+    }),
+    makeTatum({
+      pluginId: 'dogecoin',
+      chain: tatumChainMap.dogecoin,
+      webhookRegistry,
+      normalizeAddress: identityNormalizeAddress
+    }),
+    makeTatum({
+      pluginId: 'litecoin',
+      chain: tatumChainMap.litecoin,
+      webhookRegistry,
+      normalizeAddress: identityNormalizeAddress
+    }),
+    makeTatum({
+      pluginId: 'ripple',
+      chain: tatumChainMap.ripple,
+      webhookRegistry,
+      normalizeAddress: identityNormalizeAddress
+    }),
+    makeTatum({
+      pluginId: 'tezos',
+      chain: tatumChainMap.tezos,
+      webhookRegistry,
+      normalizeAddress: identityNormalizeAddress
+    }),
+    makeTatum({
+      pluginId: 'tron',
+      chain: tatumChainMap.tron,
+      webhookRegistry,
+      normalizeAddress: identityNormalizeAddress
+    }),
 
     // EVM chains using EvmRpc polling (not supported by Alchemy):
     makeEvmRpc({

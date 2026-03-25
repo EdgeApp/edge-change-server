@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Added Tatum webhook-based plugin for bitcoin, bitcoincash, dogecoin, litecoin, ripple, tezos, and tron.
+
 ## 0.3.0 (2026-03-16)
 
 - added: Added flexible service key matching with URL templating.
